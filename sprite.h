@@ -1,6 +1,6 @@
 //=============================================================================
 //
-// プレイヤー処理 [player.h]
+// sprite処理 [sprite.h]
 // Author : GP11B132 99 外岡高明
 //
 //=============================================================================
@@ -26,3 +26,12 @@ void SetSpriteColorRotation(ID3D11Buffer *buf, float X, float Y, float Width, fl
 
 void SetSpriteLeftTop(ID3D11Buffer *buf, float X, float Y, float Width, float Height, float U, float V, float UW, float VH);
 
+void SetSpriteLTColor(ID3D11Buffer* buf,
+	float X, float Y, float Width, float Height,
+	float U, float V, float UW, float VH,
+	XMFLOAT4 color);
+
+void SetSpriteColorMirror(ID3D11Buffer* buf, float X, float Y, float Width, float Height,
+	float U, float V, float UW, float VH,
+	XMFLOAT4 Color, float Rot,
+	BOOL mirror);

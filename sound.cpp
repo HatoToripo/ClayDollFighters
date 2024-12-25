@@ -1,9 +1,11 @@
+
 //=============================================================================
 //
 // サウンド処理 [sound.cpp]
 //
 //=============================================================================
 #include "sound.h"
+#include "setting.h"
 
 //*****************************************************************************
 // パラメータ構造体定義
@@ -13,6 +15,11 @@ typedef struct
 	char *pFilename;	// ファイル名
 	int nCntLoop;		// ループカウント
 } SOUNDPARAM;
+
+//*****************************************************************************
+// マクロ定義
+//*****************************************************************************
+#define DB_INTERVAL				(-10)	// 音量設定の間隔
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -32,24 +39,32 @@ DWORD g_aSizeAudio[SOUND_LABEL_MAX] = {};					// オーディオデータサイズ
 // 各音素材のパラメータ
 SOUNDPARAM g_aParam[SOUND_LABEL_MAX] =
 {
-	{ (char*)"data/BGM/sample000.wav", -1 },	// BGM0
-	{ (char*)"data/BGM/bgm_maoudamashii_neorock73.wav", -1 },	// BGM1
-	{ (char*)"data/BGM/sample001.wav", -1 },	// BGM2
-	{ (char*)"data/SE/bomb000.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/defend000.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/defend001.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/hit000.wav", 0 },			// 弾発射音
-	{ (char*)"data/SE/laser000.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/lockon000.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/shot000.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/shot001.wav", 0 },		// ヒット音
+	{ (char*)"data/BGM/op.wav", -1 },	// BGM0
+	{ (char*)"data/BGM/field0.wav", -1 },	// BGM1
+	{ (char*)"data/BGM/field1.wav", -1 },	// BGM1
+	{ (char*)"data/BGM/field2.wav", -1 },	// BGM1
+	{ (char*)"data/BGM/field3.wav", -1 },	// BGM1
+	{ (char*)"data/BGM/clear.wav", -1 },	// BGM2
+	{ (char*)"data/SE/fire.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/hassha.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/jump.wav", 0 },			// 弾発射音
+	{ (char*)"data/SE/teki_taosu.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/death.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/goal.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/select.wav", 0 },		// 選択音
+	{ (char*)"data/SE/enter.wav", 0 },		// 決定音
 };
 
+static int						g_Volume;					// ボリューム
+static int						g_SEVolume;					// SEボリューム
+static int g_Label;
 //=============================================================================
 // 初期化処理
 //=============================================================================
-BOOL InitSound(HWND hWnd)
+bool InitSound(HWND hWnd)
 {
+	g_Volume = 1;		// 音量の初期化
+	g_SEVolume = 1;		// SE音量の初期化
 	HRESULT hr;
 
 	// COMライブラリの初期化
@@ -64,7 +79,7 @@ BOOL InitSound(HWND hWnd)
 		// COMライブラリの終了処理
 		CoUninitialize();
 
-		return FALSE;
+		return false;
 	}
 	
 	// マスターボイスの生成
@@ -83,7 +98,7 @@ BOOL InitSound(HWND hWnd)
 		// COMライブラリの終了処理
 		CoUninitialize();
 
-		return FALSE;
+		return false;
 	}
 
 	// サウンドデータの初期化
@@ -105,12 +120,12 @@ BOOL InitSound(HWND hWnd)
 		if(hFile == INVALID_HANDLE_VALUE)
 		{
 			MessageBox(hWnd, "サウンドデータファイルの生成に失敗！(1)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 		if(SetFilePointer(hFile, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
 		{// ファイルポインタを先頭に移動
 			MessageBox(hWnd, "サウンドデータファイルの生成に失敗！(2)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 	
 		// WAVEファイルのチェック
@@ -118,18 +133,18 @@ BOOL InitSound(HWND hWnd)
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "WAVEファイルのチェックに失敗！(1)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 		hr = ReadChunkData(hFile, &dwFiletype, sizeof(DWORD), dwChunkPosition);
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "WAVEファイルのチェックに失敗！(2)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 		if(dwFiletype != 'EVAW')
 		{
 			MessageBox(hWnd, "WAVEファイルのチェックに失敗！(3)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 	
 		// フォーマットチェック
@@ -137,13 +152,13 @@ BOOL InitSound(HWND hWnd)
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "フォーマットチェックに失敗！(1)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 		hr = ReadChunkData(hFile, &wfx, dwChunkSize, dwChunkPosition);
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "フォーマットチェックに失敗！(2)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 
 		// オーディオデータ読み込み
@@ -151,14 +166,14 @@ BOOL InitSound(HWND hWnd)
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "オーディオデータ読み込みに失敗！(1)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 		g_apDataAudio[nCntSound] = (BYTE*)malloc(g_aSizeAudio[nCntSound]);
 		hr = ReadChunkData(hFile, g_apDataAudio[nCntSound], g_aSizeAudio[nCntSound], dwChunkPosition);
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "オーディオデータ読み込みに失敗！(2)", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 	
 		// ソースボイスの生成
@@ -166,7 +181,7 @@ BOOL InitSound(HWND hWnd)
 		if(FAILED(hr))
 		{
 			MessageBox(hWnd, "ソースボイスの生成に失敗！", "警告！", MB_ICONWARNING);
-			return FALSE;
+			return false;
 		}
 
 		// バッファの値設定
@@ -180,7 +195,7 @@ BOOL InitSound(HWND hWnd)
 		g_apSourceVoice[nCntSound]->SubmitSourceBuffer(&buffer);
 	}
 
-	return TRUE;
+	return true;
 }
 
 //=============================================================================
@@ -219,6 +234,8 @@ void UninitSound(void)
 	
 	// COMライブラリの終了処理
 	CoUninitialize();
+
+	g_Label = 0;
 }
 
 //=============================================================================
@@ -236,6 +253,10 @@ void PlaySound(int label)
 	buffer.Flags      = XAUDIO2_END_OF_STREAM;
 	buffer.LoopCount  = g_aParam[label].nCntLoop;
 
+	if (buffer.LoopCount != 0)
+	{
+		g_Label = label;
+	}
 	// 状態取得
 	g_apSourceVoice[label]->GetState(&xa2state);
 	if(xa2state.BuffersQueued != 0)
@@ -251,8 +272,25 @@ void PlaySound(int label)
 	g_apSourceVoice[label]->SubmitSourceBuffer(&buffer);
 
 	// 再生
-	g_apSourceVoice[label]->Start(0);
+	float db;
+	float volume;
+	// SEとBGMで音量を分ける
+	if (g_aParam[label].nCntLoop == 0)
+	{
+		db = (float)g_SEVolume * DB_INTERVAL;
+		volume = XAudio2DecibelsToAmplitudeRatio(db);
+		if (g_SEVolume == VOLUME_MIN) volume = 0.0f;
+	}
 
+	else
+	{
+		db = (float)g_Volume * DB_INTERVAL;
+		volume = XAudio2DecibelsToAmplitudeRatio(db);
+		if (g_Volume == VOLUME_MIN) volume = 0.0f;
+	}
+
+	g_apSourceVoice[label]->SetVolume(volume);
+	g_apSourceVoice[label]->Start(0);
 }
 
 //=============================================================================
@@ -378,3 +416,52 @@ HRESULT ReadChunkData(HANDLE hFile, void *pBuffer, DWORD dwBuffersize, DWORD dwB
 	return S_OK;
 }
 
+// 再生中の曲のボリュームを設定する
+void SetNowVolume(int volumeNum)
+{
+	float db = (float)volumeNum * DB_INTERVAL;
+	float volume = XAudio2DecibelsToAmplitudeRatio(db);
+	if (volumeNum == VOLUME_MIN) volume = 0.0f;
+	g_apSourceVoice[g_Label]->SetVolume(volume);
+}
+
+// 鳴っているサウンドを一時停止する
+void PauseSound(void)
+{
+	g_apSourceVoice[g_Label]->Stop(XAUDIO2_PLAY_TAILS);
+}
+
+// ポーズした曲を再生する
+void PlayPauseSound(void)
+{
+	g_apSourceVoice[g_Label]->Start();
+}
+
+// ボリュームの値を取得
+int GetVolume(void)
+{
+	return g_Volume;
+}
+
+// ボリュームに値をセット
+void SetVolume(int volume)
+{
+	g_Volume = volume;
+}
+
+// SEボリュームの値を取得
+int GetSEVolume(void)
+{
+	return g_SEVolume;
+}
+
+// SEボリュームに値をセット
+void SetSEVolume(int SEVolume)
+{
+	g_SEVolume = SEVolume;
+}
+
+int GetLabel(void)
+{
+	return g_Label;
+}
