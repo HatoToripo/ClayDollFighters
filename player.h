@@ -5,6 +5,7 @@
 //
 //=============================================================================
 #pragma once
+#include "model.h"
 
 
 //*****************************************************************************
@@ -14,7 +15,30 @@
 
 #define	PLAYER_SIZE		(5.0f)				// 当たり判定の大きさ
 
+enum
+{
+	PARTS_HEAD,
+	PARTS_ARM_L,
+	PARTS_ARM_R,
+	PARTS_HAND_L,
+	PARTS_HAND_R,
+	PARTS_LEG_L,
+	PARTS_LEG_R,
+	PARTS_FOOT_L,
+	PARTS_FOOT_R,
 
+	PLAYER_PARTS_MAX
+};
+
+enum
+{
+	ANIM_STOP,
+	ANIM_MOVE,
+	ANIM_DASH,
+	ANIM_JUMP,
+
+	ANIM_MAX
+};
 //*****************************************************************************
 // 構造体定義
 //*****************************************************************************
@@ -38,9 +62,12 @@ public:
 	float				size;
 
 	// 階層アニメーション用のメンバー変数
-	float				time;				// 線形補間用
-	int					tblNo;				// 行動データのテーブル番号
-	int					tblMax;				// そのテーブルのデータ数
+	float				time[ANIM_MAX];				// 線形補間用
+	int					tblNo[ANIM_MAX];				// 行動データのテーブル番号
+	int					tblMax[ANIM_MAX];				// そのテーブルのデータ数
+
+	BOOL				jump;			// ジャンプフラグ
+	int					jumpCnt;		// ジャンプ中のカウント
 
 	// 親は、NULL、子供は親のアドレスを入れる
 	PLAYER				*parent;			// 自分が親ならNULL、自分が子供なら親のplayerアドレス
@@ -63,4 +90,6 @@ void UpdatePlayer(void);
 void DrawPlayer(void);
 
 PLAYER *GetPlayer(void);
+void Animation(int animNum, int i);
+void AnimationBlend(int animNum1, int animNum2, int i);
 
