@@ -10,11 +10,38 @@
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-#define ENEMY_MAX		(5)					// エネミーの数
+#define ENEMY_MAX		(1)					// エネミーの数
 
 #define	ENEMY_SIZE		(5.0f)				// 当たり判定の大きさ
 
+enum
+{
+	ENEMY_PARTS_HEAD,
+	ENEMY_PARTS_ARM_L,
+	ENEMY_PARTS_ARM_R,
+	ENEMY_PARTS_HAND_L,
+	ENEMY_PARTS_HAND_R,
+	ENEMY_PARTS_LEG_L,
+	ENEMY_PARTS_LEG_R,
+	ENEMY_PARTS_FOOT_L,
+	ENEMY_PARTS_FOOT_R,
+	//ENEMY_PARTS_SWORD_R,
+	//ENEMY_PARTS_SWORD_B,
+	//ENEMY_PARTS_SCABBARD,
 
+	ENEMY_PARTS_MAX
+};
+
+enum
+{
+	ENEMY_ANIM_STOP,
+	ENEMY_ANIM_MOVE,
+	ENEMY_ANIM_DASH,
+	//ENEMY_ANIM_JUMP,
+	//ENEMY_ANIM_ATTACK,
+
+	ENEMY_ANIM_MAX
+};
 //*****************************************************************************
 // 構造体定義
 //*****************************************************************************
@@ -35,9 +62,14 @@ public:
 	float				size;				// 当たり判定の大きさ
 	int					shadowIdx;			// 影のインデックス番号
 
-	float				time;				// 線形補間用
-	int					tblNo;				// 行動データのテーブル番号
-	int					tblMax;				// そのテーブルのデータ数
+	// 階層アニメーション用のメンバー変数
+	float				time[ENEMY_ANIM_MAX];				// 線形補間用
+	int					tblNo[ENEMY_ANIM_MAX];				// 行動データのテーブル番号
+	int					tblMax[ENEMY_ANIM_MAX];				// そのテーブルのデータ数
+
+
+	// 親は、NULL、子供は親のアドレスを入れる
+	ENEMY* parent;			// 自分が親ならNULL、自分が子供なら親のplayerアドレス
 
 };
 

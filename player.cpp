@@ -534,7 +534,7 @@ static INTERPOLATION_DATA* g_AttackTblAdr[] =
 };
 
 // 選択したアニメーションに移行するフレーム
-static float g_AnimTransFrame[ANIM_MAX] =
+static float g_AnimTransFrame[PLAYER_ANIM_MAX] =
 {
 	BLEND_FRAME_STOP,
 	BLEND_FRAME_MOVE,
@@ -543,9 +543,7 @@ static float g_AnimTransFrame[ANIM_MAX] =
 	BLEND_FRAME_ATTACK,
 };
 
-static float g_AnimTransFrameCnt[ANIM_MAX];			// アニメーションに移行するフレームのカウンタ
-
-static int g_AnimNum[PLAYER_PARTS_MAX];		// 現在のアニメーション番号
+static float g_AnimTransFrameCnt[PLAYER_ANIM_MAX];			// アニメーションに移行するフレームのカウンタ
 
 //=============================================================================
 // 初期化処理
@@ -598,7 +596,7 @@ HRESULT InitPlayer(void)
 		//	g_Parts[手].parent= &g_Paerts[腕];	// 指が腕の子供だった場合の例
 
 			// 階層アニメーション用のメンバー変数の初期化
-		for (int j = 0; j < ANIM_MAX; j++)
+		for (int j = 0; j < PLAYER_ANIM_MAX; j++)
 		{
 			g_Parts[i].time[j] = 0.0f;			// 線形補間用のタイマーをクリア
 			g_Parts[i].tblNo[j] = 0;			// 再生する行動データテーブルNoをセット
@@ -609,194 +607,193 @@ HRESULT InitPlayer(void)
 
 
 		// パーツの初期アニメーションを設定
-		g_AnimNum[i] = ANIM_STOP;
-
+		g_Parts[i].animNum = PLAYER_ANIM_STOP;
 	}
 
-	g_Parts[PARTS_HEAD].use = TRUE;
-	g_Parts[PARTS_HEAD].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_HEAD].tblNo[ANIM_STOP] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HEAD].tblMax[ANIM_STOP] = sizeof(stop_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HEAD].tblNo[ANIM_MOVE] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HEAD].tblMax[ANIM_MOVE] = sizeof(move_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HEAD].tblNo[ANIM_DASH] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HEAD].tblMax[ANIM_DASH] = sizeof(dash_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HEAD].tblNo[ANIM_JUMP] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HEAD].tblMax[ANIM_JUMP] = sizeof(jump_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HEAD].tblNo[ANIM_ATTACK] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HEAD].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HEAD].load = 1;
-	LoadModel(MODEL_PLAYER_HEAD, &g_Parts[PARTS_HEAD].model);
+	g_Parts[PLAYER_PARTS_HEAD].use = TRUE;
+	g_Parts[PLAYER_PARTS_HEAD].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HEAD].load = 1;
+	LoadModel(MODEL_PLAYER_HEAD, &g_Parts[PLAYER_PARTS_HEAD].model);
 
-	g_Parts[PARTS_ARM_L].use = TRUE;
-	g_Parts[PARTS_ARM_L].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_ARM_L].tblNo[ANIM_STOP] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_L].tblMax[ANIM_STOP] = sizeof(stop_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_L].tblNo[ANIM_MOVE] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_L].tblMax[ANIM_MOVE] = sizeof(move_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_L].tblNo[ANIM_DASH] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_L].tblNo[ANIM_JUMP] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_L].tblNo[ANIM_ATTACK] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_L].load = 1;
-	LoadModel(MODEL_PLAYER_ARM_L, &g_Parts[PARTS_ARM_L].model);
+	g_Parts[PLAYER_PARTS_ARM_L].use = TRUE;
+	g_Parts[PLAYER_PARTS_ARM_L].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_L].load = 1;
+	LoadModel(MODEL_PLAYER_ARM_L, &g_Parts[PLAYER_PARTS_ARM_L].model);
 
-	g_Parts[PARTS_ARM_R].use = TRUE;
-	g_Parts[PARTS_ARM_R].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_ARM_R].tblNo[ANIM_STOP] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_R].tblMax[ANIM_STOP] = sizeof(stop_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_R].tblNo[ANIM_MOVE] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_R].tblMax[ANIM_MOVE] = sizeof(move_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_R].tblNo[ANIM_DASH] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_R].tblNo[ANIM_JUMP] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_R].tblNo[ANIM_ATTACK] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_ARM_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_ARM_R].load = 1;
-	LoadModel(MODEL_PLAYER_ARM_R, &g_Parts[PARTS_ARM_R].model);
+	g_Parts[PLAYER_PARTS_ARM_R].use = TRUE;
+	g_Parts[PLAYER_PARTS_ARM_R].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_ARM_R].load = 1;
+	LoadModel(MODEL_PLAYER_ARM_R, &g_Parts[PLAYER_PARTS_ARM_R].model);
 
-	g_Parts[PARTS_HAND_L].use = TRUE;
-	g_Parts[PARTS_HAND_L].parent = &g_Parts[PARTS_ARM_L];	// 親をセット
-	g_Parts[PARTS_HAND_L].tblNo[ANIM_STOP] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_L].tblMax[ANIM_STOP] = sizeof(stop_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_L].tblNo[ANIM_MOVE] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_L].tblMax[ANIM_MOVE] = sizeof(move_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_L].tblNo[ANIM_DASH] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_L].tblNo[ANIM_JUMP] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_L].tblNo[ANIM_ATTACK] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_L].load = 1;
-	LoadModel(MODEL_PLAYER_HAND_L, &g_Parts[PARTS_HAND_L].model);
+	g_Parts[PLAYER_PARTS_HAND_L].use = TRUE;
+	g_Parts[PLAYER_PARTS_HAND_L].parent = &g_Parts[PLAYER_PARTS_ARM_L];	// 親をセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_L].load = 1;
+	LoadModel(MODEL_PLAYER_HAND_L, &g_Parts[PLAYER_PARTS_HAND_L].model);
 
-	g_Parts[PARTS_HAND_R].use = TRUE;
-	g_Parts[PARTS_HAND_R].parent = &g_Parts[PARTS_ARM_R];	// 親をセット
-	g_Parts[PARTS_HAND_R].tblNo[ANIM_STOP] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_R].tblMax[ANIM_STOP] = sizeof(stop_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_R].tblNo[ANIM_MOVE] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_R].tblMax[ANIM_MOVE] = sizeof(move_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_R].tblNo[ANIM_DASH] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_R].tblNo[ANIM_JUMP] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_R].tblNo[ANIM_ATTACK] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_HAND_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_HAND_R].load = 1;
-	LoadModel(MODEL_PLAYER_HAND_R, &g_Parts[PARTS_HAND_R].model);
+	g_Parts[PLAYER_PARTS_HAND_R].use = TRUE;
+	g_Parts[PLAYER_PARTS_HAND_R].parent = &g_Parts[PLAYER_PARTS_ARM_R];	// 親をセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_HAND_R].load = 1;
+	LoadModel(MODEL_PLAYER_HAND_R, &g_Parts[PLAYER_PARTS_HAND_R].model);
 
-	g_Parts[PARTS_LEG_L].use = TRUE;
-	g_Parts[PARTS_LEG_L].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_LEG_L].tblNo[ANIM_STOP] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_L].tblMax[ANIM_STOP] = sizeof(stop_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_L].tblNo[ANIM_MOVE] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_L].tblMax[ANIM_MOVE] = sizeof(move_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_L].tblNo[ANIM_DASH] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_L].tblNo[ANIM_JUMP] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_L].tblNo[ANIM_ATTACK] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_L].load = 1;
-	LoadModel(MODEL_PLAYER_LEG_L, &g_Parts[PARTS_LEG_L].model);
+	g_Parts[PLAYER_PARTS_LEG_L].use = TRUE;
+	g_Parts[PLAYER_PARTS_LEG_L].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_L].load = 1;
+	LoadModel(MODEL_PLAYER_LEG_L, &g_Parts[PLAYER_PARTS_LEG_L].model);
 
-	g_Parts[PARTS_LEG_R].use = TRUE;
-	g_Parts[PARTS_LEG_R].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_LEG_R].tblNo[ANIM_STOP] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_R].tblMax[ANIM_STOP] = sizeof(stop_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_R].tblNo[ANIM_MOVE] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_R].tblMax[ANIM_MOVE] = sizeof(move_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_R].tblNo[ANIM_DASH] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_R].tblNo[ANIM_JUMP] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_R].tblNo[ANIM_ATTACK] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_LEG_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_LEG_R].load = 1;
-	LoadModel(MODEL_PLAYER_LEG_R, &g_Parts[PARTS_LEG_R].model);
+	g_Parts[PLAYER_PARTS_LEG_R].use = TRUE;
+	g_Parts[PLAYER_PARTS_LEG_R].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_LEG_R].load = 1;
+	LoadModel(MODEL_PLAYER_LEG_R, &g_Parts[PLAYER_PARTS_LEG_R].model);
 
-	g_Parts[PARTS_FOOT_L].use = TRUE;
-	g_Parts[PARTS_FOOT_L].parent = &g_Parts[PARTS_LEG_L];	// 親をセット
-	g_Parts[PARTS_FOOT_L].tblNo[ANIM_STOP] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_L].tblMax[ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_L].tblNo[ANIM_MOVE] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_L].tblMax[ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_L].tblNo[ANIM_DASH] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_L].tblNo[ANIM_JUMP] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_L].tblNo[ANIM_ATTACK] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_L].load = 1;
-	LoadModel(MODEL_PLAYER_FOOT_L, &g_Parts[PARTS_FOOT_L].model);
+	g_Parts[PLAYER_PARTS_FOOT_L].use = TRUE;
+	g_Parts[PLAYER_PARTS_FOOT_L].parent = &g_Parts[PLAYER_PARTS_LEG_L];	// 親をセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_L].load = 1;
+	LoadModel(MODEL_PLAYER_FOOT_L, &g_Parts[PLAYER_PARTS_FOOT_L].model);
 
-	g_Parts[PARTS_FOOT_R].use = TRUE;
-	g_Parts[PARTS_FOOT_R].parent = &g_Parts[PARTS_LEG_R];	// 親をセット
-	g_Parts[PARTS_FOOT_R].tblNo[ANIM_STOP] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_R].tblMax[ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_R].tblNo[ANIM_MOVE] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_R].tblMax[ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_R].tblNo[ANIM_DASH] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_R].tblNo[ANIM_JUMP] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_R].tblNo[ANIM_ATTACK] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_FOOT_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_FOOT_R].load = 1;
-	LoadModel(MODEL_PLAYER_FOOT_R, &g_Parts[PARTS_FOOT_R].model);
+	g_Parts[PLAYER_PARTS_FOOT_R].use = TRUE;
+	g_Parts[PLAYER_PARTS_FOOT_R].parent = &g_Parts[PLAYER_PARTS_LEG_R];	// 親をセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_FOOT_R].load = 1;
+	LoadModel(MODEL_PLAYER_FOOT_R, &g_Parts[PLAYER_PARTS_FOOT_R].model);
 
-	g_Parts[PARTS_SWORD_R].use = FALSE;
-	g_Parts[PARTS_SWORD_R].parent = &g_Parts[PARTS_HAND_R];	// 親をセット
-	g_Parts[PARTS_SWORD_R].tblNo[ANIM_STOP] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_R].tblMax[ANIM_STOP] = sizeof(stop_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_R].tblNo[ANIM_MOVE] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_R].tblMax[ANIM_MOVE] = sizeof(move_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_R].tblNo[ANIM_DASH] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_R].tblNo[ANIM_JUMP] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_R].tblNo[ANIM_ATTACK] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_R].load = 1;
-	LoadModel(MODEL_PLAYER_SWORD_R, &g_Parts[PARTS_SWORD_R].model);
+	g_Parts[PLAYER_PARTS_SWORD_R].use = FALSE;
+	g_Parts[PLAYER_PARTS_SWORD_R].parent = &g_Parts[PLAYER_PARTS_HAND_R];	// 親をセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_R].load = 1;
+	LoadModel(MODEL_PLAYER_SWORD_R, &g_Parts[PLAYER_PARTS_SWORD_R].model);
 
-	g_Parts[PARTS_SWORD_B].use = TRUE;
-	g_Parts[PARTS_SWORD_B].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_SWORD_B].tblNo[ANIM_STOP] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_B].tblMax[ANIM_STOP] = sizeof(stop_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_B].tblNo[ANIM_MOVE] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_B].tblMax[ANIM_MOVE] = sizeof(move_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_B].tblNo[ANIM_DASH] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_B].tblMax[ANIM_DASH] = sizeof(dash_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_B].tblNo[ANIM_JUMP] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_B].tblMax[ANIM_JUMP] = sizeof(jump_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_B].tblNo[ANIM_ATTACK] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SWORD_B].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SWORD_B].load = 1;
-	LoadModel(MODEL_PLAYER_SWORD_B, &g_Parts[PARTS_SWORD_B].model);
+	g_Parts[PLAYER_PARTS_SWORD_B].use = TRUE;
+	g_Parts[PLAYER_PARTS_SWORD_B].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SWORD_B].load = 1;
+	LoadModel(MODEL_PLAYER_SWORD_B, &g_Parts[PLAYER_PARTS_SWORD_B].model);
 
-	g_Parts[PARTS_SCABBARD].use = TRUE;
-	g_Parts[PARTS_SCABBARD].parent = &g_Player;	// 親をセット
-	g_Parts[PARTS_SCABBARD].tblNo[ANIM_STOP] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SCABBARD].tblMax[ANIM_STOP] = sizeof(stop_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SCABBARD].tblNo[ANIM_MOVE] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SCABBARD].tblMax[ANIM_MOVE] = sizeof(move_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SCABBARD].tblNo[ANIM_DASH] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SCABBARD].tblMax[ANIM_DASH] = sizeof(dash_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SCABBARD].tblNo[ANIM_JUMP] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SCABBARD].tblMax[ANIM_JUMP] = sizeof(jump_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SCABBARD].tblNo[ANIM_ATTACK] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PARTS_SCABBARD].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PARTS_SCABBARD].load = 1;
-	LoadModel(MODEL_PLAYER_SCABBARD, &g_Parts[PARTS_SCABBARD].model);
+	g_Parts[PLAYER_PARTS_SCABBARD].use = TRUE;
+	g_Parts[PLAYER_PARTS_SCABBARD].parent = &g_Player;	// 親をセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PLAYER_PARTS_SCABBARD].load = 1;
+	LoadModel(MODEL_PLAYER_SCABBARD, &g_Parts[PLAYER_PARTS_SCABBARD].model);
 
 	// クォータニオンの初期化
 	XMStoreFloat4(&g_Player.Quaternion, XMQuaternionIdentity());
 
-	for (int i = 0; i < ANIM_MAX; i++)
+	for (int i = 0; i < PLAYER_ANIM_MAX; i++)
 	{
 		g_AnimTransFrameCnt[i] = 0.0f;
 	}
@@ -841,7 +838,7 @@ void UpdatePlayer(void)
 	g_Player.spd *= 0.4f;
 
 	// アニメーションを待機モーションにリセット
-	int animNum = ANIM_STOP;
+	int animNum = PLAYER_ANIM_STOP;
 
 	// 移動処理
 	if (GetKeyboardPress(DIK_LEFT))
@@ -849,28 +846,28 @@ void UpdatePlayer(void)
 		g_Player.spd = VALUE_MOVE;
 		//g_Player.pos.x -= g_Player.spd;
 		roty = XM_PI / 2;
-		animNum = ANIM_MOVE;
+		animNum = PLAYER_ANIM_MOVE;
 	}
 	if (GetKeyboardPress(DIK_RIGHT))
 	{
 		g_Player.spd = VALUE_MOVE;
 		//g_Player.pos.x += g_Player.spd;
 		roty = -XM_PI / 2;
-		animNum = ANIM_MOVE;
+		animNum = PLAYER_ANIM_MOVE;
 	}
 	if (GetKeyboardPress(DIK_UP))
 	{
 		g_Player.spd = VALUE_MOVE;
 		//g_Player.pos.z += g_Player.spd;
 		roty = XM_PI;
-		animNum = ANIM_MOVE;
+		animNum = PLAYER_ANIM_MOVE;
 	}
 	if (GetKeyboardPress(DIK_DOWN))
 	{
 		g_Player.spd = VALUE_MOVE;
 		//g_Player.pos.z -= g_Player.spd;
 		roty = 0.0f;
-		animNum = ANIM_MOVE;
+		animNum = PLAYER_ANIM_MOVE;
 	}
 
 	// ダッシュ処理
@@ -881,7 +878,7 @@ void UpdatePlayer(void)
 		// 移動キーを押している間はダッシュアニメーションをセット
 		if (g_Player.spd >= VALUE_MOVE * VALUE_DASH)
 		{
-			animNum = ANIM_DASH;
+			animNum = PLAYER_ANIM_DASH;
 		}
 	}
 
@@ -948,10 +945,10 @@ void UpdatePlayer(void)
 		{
 			g_Player.jump = FALSE;
 			g_Player.jumpCnt = 0;
-			g_AnimTransFrameCnt[ANIM_JUMP] = 0.0f;
+			g_AnimTransFrameCnt[PLAYER_ANIM_JUMP] = 0.0f;
 			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
 			{
-				g_Parts[i].time[ANIM_JUMP] = 0.0f;
+				g_Parts[i].time[PLAYER_ANIM_JUMP] = 0.0f;
 			}
 		}
 
@@ -968,19 +965,19 @@ void UpdatePlayer(void)
 	if (g_Player.attack == TRUE)
 	{
 		// アタックアニメーションをセット
-		animNum = ANIM_ATTACK;
+		animNum = PLAYER_ANIM_ATTACK;
 		g_Player.atkCnt++;
 		// 剣を抜いたように見えるときだけ手に持つようにセット
-		if ((int)g_Parts[PARTS_ARM_R].time[ANIM_ATTACK] < 1)
+		if ((int)g_Parts[PLAYER_PARTS_ARM_R].time[PLAYER_ANIM_ATTACK] < 1)
 		{
-			g_Parts[PARTS_SWORD_R].use = FALSE;
-			g_Parts[PARTS_SWORD_B].use = TRUE;
+			g_Parts[PLAYER_PARTS_SWORD_R].use = FALSE;
+			g_Parts[PLAYER_PARTS_SWORD_B].use = TRUE;
 		}
 
 		else
 		{
-			g_Parts[PARTS_SWORD_R].use = TRUE;
-			g_Parts[PARTS_SWORD_B].use = FALSE;
+			g_Parts[PLAYER_PARTS_SWORD_R].use = TRUE;
+			g_Parts[PLAYER_PARTS_SWORD_B].use = FALSE;
 			XMFLOAT3 pos = g_Player.pos;
 
 			pos.x -= sinf(g_Player.rot.y) * ATTACK_DEPTH * 0.5;
@@ -1002,13 +999,13 @@ void UpdatePlayer(void)
 		{
 			g_Player.attack = FALSE;
 			g_Player.atkCnt = 0;
-			g_AnimTransFrameCnt[ANIM_ATTACK] = 0.0f;
+			g_AnimTransFrameCnt[PLAYER_ANIM_ATTACK] = 0.0f;
 
 			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
 			{
-				g_Parts[i].time[ANIM_ATTACK] = 0.0f;
-				g_Parts[PARTS_SWORD_R].use = FALSE;
-				g_Parts[PARTS_SWORD_B].use = TRUE;
+				g_Parts[i].time[PLAYER_ANIM_ATTACK] = 0.0f;
+				g_Parts[PLAYER_PARTS_SWORD_R].use = FALSE;
+				g_Parts[PLAYER_PARTS_SWORD_B].use = TRUE;
 			}
 		}
 	}
@@ -1017,7 +1014,7 @@ void UpdatePlayer(void)
 	{
 		g_Player.attack = TRUE;
 		g_Player.atkCnt = 0;
-		animNum = ANIM_ATTACK;
+		animNum = PLAYER_ANIM_ATTACK;
 	}
 
 	// 階層アニメーション
@@ -1030,18 +1027,18 @@ void UpdatePlayer(void)
 			// アタックアニメーションを優先
 			if (g_Player.attack == TRUE)
 			{
-				AnimationBlend(animNum, ANIM_JUMP, i);
+				g_Parts[i].Animation(animNum, PLAYER_ANIM_JUMP);
 			}
 
 			else
 			{
-				AnimationBlend(ANIM_JUMP, animNum, i);
+				g_Parts[i].Animation(PLAYER_ANIM_JUMP, animNum);
 			}
 		}
 
 		else
 		{
-			AnimationBlend(animNum, g_AnimNum[i], i);
+			g_Parts[i].Animation(animNum, g_Parts[i].animNum);
 		}
 	}
 
@@ -1201,32 +1198,34 @@ PLAYER* GetPlayerParts(void)
 	return &g_Parts[0];
 }
 
-void Animation(int animNum, int i)
+//=============================================================================
+// アニメーション関数
+//=============================================================================
+void PLAYER::Animation(int animNum)
 {
-	// 線形補間の処理
 	INTERPOLATION_DATA* tbl;
 
 	switch (animNum)
 	{
-	case ANIM_STOP:
-		tbl = g_StopTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+	case PLAYER_ANIM_STOP:
+		tbl = g_StopTblAdr[tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
-	case ANIM_MOVE:
-		tbl = g_MoveTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+	case PLAYER_ANIM_MOVE:
+		tbl = g_MoveTblAdr[tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
-	case ANIM_DASH:
-		tbl = g_DashTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+	case PLAYER_ANIM_DASH:
+		tbl = g_DashTblAdr[tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
-	case ANIM_JUMP:
-		tbl = g_JumpTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+	case PLAYER_ANIM_JUMP:
+		tbl = g_JumpTblAdr[tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
 	default:
-		tbl = g_AttackTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+		tbl = g_AttackTblAdr[tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
 	}
 
-	int nowNo = (int)g_Parts[i].time[animNum];			// 整数分であるテーブル番号を取り出している
-	int maxNo = g_Parts[i].tblMax[animNum];				// 登録テーブル数を数えている
+	int nowNo = (int)time[animNum];			// 整数分であるテーブル番号を取り出している
+	int maxNo = tblMax[animNum];				// 登録テーブル数を数えている
 	int nextNo = (nowNo + 1) % maxNo;			// 移動先テーブルの番号を求めている
 
 	XMVECTOR nowPos = XMLoadFloat3(&tbl[nowNo].pos);	// XMVECTORへ変換
@@ -1237,38 +1236,37 @@ void Animation(int animNum, int i)
 	XMVECTOR Rot = XMLoadFloat3(&tbl[nextNo].rot) - nowRot;	// XYZ回転量を計算している
 	XMVECTOR Scl = XMLoadFloat3(&tbl[nextNo].scl) - nowScl;	// XYZ拡大率を計算している
 
-	float nowTime = g_Parts[i].time[animNum] - nowNo;	// 時間部分である少数を取り出している
+	float nowTime = time[animNum] - nowNo;	// 時間部分である少数を取り出している
 
 	Pos = nowPos + Pos * nowTime;								// 現在の移動量を計算している
 	Rot = nowRot + Rot * nowTime;								// 現在の回転量を計算している
 	Scl = nowScl + Scl * nowTime;								// 現在の拡大率を計算している
 
 	// 計算して求めた移動量を現在の移動テーブルXYZに足している＝表示座標を求めている
-	XMStoreFloat3(&g_Parts[i].pos, Pos);
+	XMStoreFloat3(&pos, Pos);
 
 	// 計算して求めた回転量を現在の移動テーブルに足している
-	XMStoreFloat3(&g_Parts[i].rot, Rot);
+	XMStoreFloat3(&rot, Rot);
 
 	// 計算して求めた拡大率を現在の移動テーブルに足している
-	XMStoreFloat3(&g_Parts[i].scl, Scl);
+	XMStoreFloat3(&scl, Scl);
 
 	// frameを使て時間経過処理をする
-	g_Parts[i].time[animNum] += 1.0f / tbl[nowNo].frame;	// 時間を進めている
-	if ((int)g_Parts[i].time[animNum] >= maxNo)			// 登録テーブル最後まで移動したか？
+	time[animNum] += 1.0f / tbl[nowNo].frame;	// 時間を進めている
+	if ((int)time[animNum] >= maxNo)			// 登録テーブル最後まで移動したか？
 	{
-		g_Parts[i].time[animNum] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
+		time[animNum] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
 	}
+
 }
 
-//=============================================================================
-// モーションブレンド関数
-//=============================================================================
-void AnimationBlend(int animNum1, int animNum2, int i)
+
+void PLAYER::Animation(int animNum1, int animNum2)
 {
 	// アニメーション番号が同じだった場合
 	if (animNum1 == animNum2)
 	{
-		Animation(animNum1, i);
+		Animation(animNum1);
 		return;
 	}
 
@@ -1278,61 +1276,61 @@ void AnimationBlend(int animNum1, int animNum2, int i)
 		g_AnimTransFrameCnt[animNum2] = 0.0f;
 	}
 
-	int animNum[2] = { animNum1, animNum2 };
+	int AnimNum[2] = { animNum1, animNum2 };
 
 	// 使われているなら処理する
-	if (/*(g_Parts[i].use == TRUE) && */(g_Parts[i].tblMax[animNum1] > 0))
+	if ((tblMax[animNum1] > 0))
 	{
 		INTERPOLATION_DATA* tbl[2];
 		XMVECTOR Pos[2];
 		XMVECTOR Rot[2];
 		XMVECTOR Scl[2];
 
-		for (int j = 0; j < 2; j++)
+		for (int i = 0; i < 2; i++)
 		{	// 線形補間の処理
 			// 1つ目のアニメーションの計算
-			switch (animNum[j])
+			switch (AnimNum[i])
 			{
-			case ANIM_STOP:
-				tbl[j] = g_StopTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+			case PLAYER_ANIM_STOP:
+				tbl[i] = g_StopTblAdr[tblNo[AnimNum[i]]];	// 待機テーブルのアドレスを取得
 				break;
-			case ANIM_MOVE:
-				tbl[j] = g_MoveTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+			case PLAYER_ANIM_MOVE:
+				tbl[i] = g_MoveTblAdr[tblNo[AnimNum[i]]];	// 待機テーブルのアドレスを取得
 				break;
-			case ANIM_DASH:
-				tbl[j] = g_DashTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+			case PLAYER_ANIM_DASH:
+				tbl[i] = g_DashTblAdr[tblNo[AnimNum[i]]];	// 待機テーブルのアドレスを取得
 				break;
-			case ANIM_JUMP:
-				tbl[j] = g_JumpTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+			case PLAYER_ANIM_JUMP:
+				tbl[i] = g_JumpTblAdr[tblNo[AnimNum[i]]];	// 待機テーブルのアドレスを取得
 				break;
 			default:
-				tbl[j] = g_AttackTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+				tbl[i] = g_AttackTblAdr[tblNo[AnimNum[i]]];	// 待機テーブルのアドレスを取得
 				break;
 			}
 
-			int nowNo = (int)g_Parts[i].time[animNum[j]];			// 整数分であるテーブル番号を取り出している
-			int maxNo = g_Parts[i].tblMax[animNum[j]];				// 登録テーブル数を数えている
+			int nowNo = (int)time[AnimNum[i]];			// 整数分であるテーブル番号を取り出している
+			int maxNo = tblMax[AnimNum[i]];				// 登録テーブル数を数えている
 			int nextNo = (nowNo + 1) % maxNo;			// 移動先テーブルの番号を求めている
 
-			XMVECTOR nowPos = XMLoadFloat3(&tbl[j][nowNo].pos);	// XMVECTORへ変換
-			XMVECTOR nowRot = XMLoadFloat3(&tbl[j][nowNo].rot);	// XMVECTORへ変換
-			XMVECTOR nowScl = XMLoadFloat3(&tbl[j][nowNo].scl);	// XMVECTORへ変換
+			XMVECTOR nowPos = XMLoadFloat3(&tbl[i][nowNo].pos);	// XMVECTORへ変換
+			XMVECTOR nowRot = XMLoadFloat3(&tbl[i][nowNo].rot);	// XMVECTORへ変換
+			XMVECTOR nowScl = XMLoadFloat3(&tbl[i][nowNo].scl);	// XMVECTORへ変換
 
-			Pos[j] = XMLoadFloat3(&tbl[j][nextNo].pos) - nowPos;	// XYZ移動量を計算している
-			Rot[j] = XMLoadFloat3(&tbl[j][nextNo].rot) - nowRot;	// XYZ回転量を計算している
-			Scl[j] = XMLoadFloat3(&tbl[j][nextNo].scl) - nowScl;	// XYZ拡大率を計算している
+			Pos[i] = XMLoadFloat3(&tbl[i][nextNo].pos) - nowPos;	// XYZ移動量を計算している
+			Rot[i] = XMLoadFloat3(&tbl[i][nextNo].rot) - nowRot;	// XYZ回転量を計算している
+			Scl[i] = XMLoadFloat3(&tbl[i][nextNo].scl) - nowScl;	// XYZ拡大率を計算している
 
-			float nowTime = g_Parts[i].time[animNum[j]] - nowNo;	// 時間部分である少数を取り出している
+			float nowTime = time[AnimNum[i]] - nowNo;	// 時間部分である少数を取り出している
 
-			Pos[j] = nowPos + Pos[j] * nowTime;
-			Rot[j] = nowRot + Rot[j] * nowTime;
-			Scl[j] = nowScl + Scl[j] * nowTime;
+			Pos[i] = nowPos + Pos[i] * nowTime;
+			Rot[i] = nowRot + Rot[i] * nowTime;
+			Scl[i] = nowScl + Scl[i] * nowTime;
 
 			// frameを使て時間経過処理をする
-			g_Parts[i].time[animNum[j]] += 1.0f / tbl[j][nowNo].frame;	// 時間を進めている
-			if ((int)g_Parts[i].time[animNum[j]] >= maxNo)			// 登録テーブル最後まで移動したか？
+			time[AnimNum[i]] += 1.0f / tbl[i][nowNo].frame;	// 時間を進めている
+			if ((int)time[AnimNum[i]] >= maxNo)			// 登録テーブル最後まで移動したか？
 			{
-				g_Parts[i].time[animNum[j]] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
+				time[AnimNum[i]] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
 			}
 		}
 		// 重みづけ
@@ -1343,22 +1341,187 @@ void AnimationBlend(int animNum1, int animNum2, int i)
 		XMVECTOR blendScl = Scl[0] * weight + Scl[1] * (1.0f - weight);
 
 		// 計算して求めた移動量を現在の移動テーブルXYZに足している＝表示座標を求めている
-		XMStoreFloat3(&g_Parts[i].pos, blendPos);
+		XMStoreFloat3(&pos, blendPos);
 
 		// 計算して求めた回転量を現在の移動テーブルに足している
-		XMStoreFloat3(&g_Parts[i].rot, blendRot);
+		XMStoreFloat3(&rot, blendRot);
 
 		// 計算して求めた拡大率を現在の移動テーブルに足している
-		XMStoreFloat3(&g_Parts[i].scl, blendScl);
+		XMStoreFloat3(&scl, blendScl);
 
 		g_AnimTransFrameCnt[animNum1] += 1.0f;
 		if (g_AnimTransFrameCnt[animNum1] >= g_AnimTransFrame[animNum1])
 		{
 			g_AnimTransFrameCnt[animNum1] = g_AnimTransFrame[animNum1];
-			g_AnimNum[i] = animNum1;
+			animNum = animNum1;
 
 			// アニメーションの移行が完了したタイミングでリセット
-			g_Parts[i].time[animNum2] = 0.0f;
+			time[animNum2] = 0.0f;
 		}
 	}
 }
+
+////=============================================================================
+//// アニメーション関数
+////=============================================================================
+//void PlayerAnimation(int animNum, int i)
+//{
+//	// 線形補間の処理
+//	INTERPOLATION_DATA* tbl;
+//
+//	switch (animNum)
+//	{
+//	case PLAYER_ANIM_STOP:
+//		tbl = g_StopTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+//		break;
+//	case PLAYER_ANIM_MOVE:
+//		tbl = g_MoveTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+//		break;
+//	case PLAYER_ANIM_DASH:
+//		tbl = g_DashTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+//		break;
+//	case PLAYER_ANIM_JUMP:
+//		tbl = g_JumpTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+//		break;
+//	default:
+//		tbl = g_AttackTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+//		break;
+//	}
+//
+//	int nowNo = (int)g_Parts[i].time[animNum];			// 整数分であるテーブル番号を取り出している
+//	int maxNo = g_Parts[i].tblMax[animNum];				// 登録テーブル数を数えている
+//	int nextNo = (nowNo + 1) % maxNo;			// 移動先テーブルの番号を求めている
+//
+//	XMVECTOR nowPos = XMLoadFloat3(&tbl[nowNo].pos);	// XMVECTORへ変換
+//	XMVECTOR nowRot = XMLoadFloat3(&tbl[nowNo].rot);	// XMVECTORへ変換
+//	XMVECTOR nowScl = XMLoadFloat3(&tbl[nowNo].scl);	// XMVECTORへ変換
+//
+//	XMVECTOR Pos = XMLoadFloat3(&tbl[nextNo].pos) - nowPos;	// XYZ移動量を計算している
+//	XMVECTOR Rot = XMLoadFloat3(&tbl[nextNo].rot) - nowRot;	// XYZ回転量を計算している
+//	XMVECTOR Scl = XMLoadFloat3(&tbl[nextNo].scl) - nowScl;	// XYZ拡大率を計算している
+//
+//	float nowTime = g_Parts[i].time[animNum] - nowNo;	// 時間部分である少数を取り出している
+//
+//	Pos = nowPos + Pos * nowTime;								// 現在の移動量を計算している
+//	Rot = nowRot + Rot * nowTime;								// 現在の回転量を計算している
+//	Scl = nowScl + Scl * nowTime;								// 現在の拡大率を計算している
+//
+//	// 計算して求めた移動量を現在の移動テーブルXYZに足している＝表示座標を求めている
+//	XMStoreFloat3(&g_Parts[i].pos, Pos);
+//
+//	// 計算して求めた回転量を現在の移動テーブルに足している
+//	XMStoreFloat3(&g_Parts[i].rot, Rot);
+//
+//	// 計算して求めた拡大率を現在の移動テーブルに足している
+//	XMStoreFloat3(&g_Parts[i].scl, Scl);
+//
+//	// frameを使て時間経過処理をする
+//	g_Parts[i].time[animNum] += 1.0f / tbl[nowNo].frame;	// 時間を進めている
+//	if ((int)g_Parts[i].time[animNum] >= maxNo)			// 登録テーブル最後まで移動したか？
+//	{
+//		g_Parts[i].time[animNum] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
+//	}
+//}
+//
+////=============================================================================
+//// モーションブレンド関数
+////=============================================================================
+//void PlayerAnimationBlend(int animNum1, int animNum2, int i)
+//{
+//	// アニメーション番号が同じだった場合
+//	if (animNum1 == animNum2)
+//	{
+//		PlayerAnimation(animNum1, i);
+//		return;
+//	}
+//
+//	// アニメーションが変わったタイミングでカウントをリセットする
+//	if (g_AnimTransFrameCnt[animNum1] < g_AnimTransFrameCnt[animNum2])
+//	{
+//		g_AnimTransFrameCnt[animNum2] = 0.0f;
+//	}
+//
+//	int animNum[2] = { animNum1, animNum2 };
+//
+//	// 使われているなら処理する
+//	if (/*(g_Parts[i].use == TRUE) && */(g_Parts[i].tblMax[animNum1] > 0))
+//	{
+//		INTERPOLATION_DATA* tbl[2];
+//		XMVECTOR Pos[2];
+//		XMVECTOR Rot[2];
+//		XMVECTOR Scl[2];
+//
+//		for (int j = 0; j < 2; j++)
+//		{	// 線形補間の処理
+//			// 1つ目のアニメーションの計算
+//			switch (animNum[j])
+//			{
+//			case PLAYER_ANIM_STOP:
+//				tbl[j] = g_StopTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+//				break;
+//			case PLAYER_ANIM_MOVE:
+//				tbl[j] = g_MoveTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+//				break;
+//			case PLAYER_ANIM_DASH:
+//				tbl[j] = g_DashTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+//				break;
+//			case PLAYER_ANIM_JUMP:
+//				tbl[j] = g_JumpTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+//				break;
+//			default:
+//				tbl[j] = g_AttackTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+//				break;
+//			}
+//
+//			int nowNo = (int)g_Parts[i].time[animNum[j]];			// 整数分であるテーブル番号を取り出している
+//			int maxNo = g_Parts[i].tblMax[animNum[j]];				// 登録テーブル数を数えている
+//			int nextNo = (nowNo + 1) % maxNo;			// 移動先テーブルの番号を求めている
+//
+//			XMVECTOR nowPos = XMLoadFloat3(&tbl[j][nowNo].pos);	// XMVECTORへ変換
+//			XMVECTOR nowRot = XMLoadFloat3(&tbl[j][nowNo].rot);	// XMVECTORへ変換
+//			XMVECTOR nowScl = XMLoadFloat3(&tbl[j][nowNo].scl);	// XMVECTORへ変換
+//
+//			Pos[j] = XMLoadFloat3(&tbl[j][nextNo].pos) - nowPos;	// XYZ移動量を計算している
+//			Rot[j] = XMLoadFloat3(&tbl[j][nextNo].rot) - nowRot;	// XYZ回転量を計算している
+//			Scl[j] = XMLoadFloat3(&tbl[j][nextNo].scl) - nowScl;	// XYZ拡大率を計算している
+//
+//			float nowTime = g_Parts[i].time[animNum[j]] - nowNo;	// 時間部分である少数を取り出している
+//
+//			Pos[j] = nowPos + Pos[j] * nowTime;
+//			Rot[j] = nowRot + Rot[j] * nowTime;
+//			Scl[j] = nowScl + Scl[j] * nowTime;
+//
+//			// frameを使て時間経過処理をする
+//			g_Parts[i].time[animNum[j]] += 1.0f / tbl[j][nowNo].frame;	// 時間を進めている
+//			if ((int)g_Parts[i].time[animNum[j]] >= maxNo)			// 登録テーブル最後まで移動したか？
+//			{
+//				g_Parts[i].time[animNum[j]] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
+//			}
+//		}
+//		// 重みづけ
+//		float weight = (1.0f / g_AnimTransFrame[animNum1]) * g_AnimTransFrameCnt[animNum1];
+//		// モーションブレンドの座標計算
+//		XMVECTOR blendPos = Pos[0] * weight + Pos[1] * (1.0f - weight);
+//		XMVECTOR blendRot = Rot[0] * weight + Rot[1] * (1.0f - weight);
+//		XMVECTOR blendScl = Scl[0] * weight + Scl[1] * (1.0f - weight);
+//
+//		// 計算して求めた移動量を現在の移動テーブルXYZに足している＝表示座標を求めている
+//		XMStoreFloat3(&g_Parts[i].pos, blendPos);
+//
+//		// 計算して求めた回転量を現在の移動テーブルに足している
+//		XMStoreFloat3(&g_Parts[i].rot, blendRot);
+//
+//		// 計算して求めた拡大率を現在の移動テーブルに足している
+//		XMStoreFloat3(&g_Parts[i].scl, blendScl);
+//
+//		g_AnimTransFrameCnt[animNum1] += 1.0f;
+//		if (g_AnimTransFrameCnt[animNum1] >= g_AnimTransFrame[animNum1])
+//		{
+//			g_AnimTransFrameCnt[animNum1] = g_AnimTransFrame[animNum1];
+//			g_Parts[i].animNum = animNum1;
+//
+//			// アニメーションの移行が完了したタイミングでリセット
+//			g_Parts[i].time[animNum2] = 0.0f;
+//		}
+//	}
+//}

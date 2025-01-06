@@ -17,31 +17,31 @@
 
 enum
 {
-	PARTS_HEAD,
-	PARTS_ARM_L,
-	PARTS_ARM_R,
-	PARTS_HAND_L,
-	PARTS_HAND_R,
-	PARTS_LEG_L,
-	PARTS_LEG_R,
-	PARTS_FOOT_L,
-	PARTS_FOOT_R,
-	PARTS_SWORD_R,
-	PARTS_SWORD_B,
-	PARTS_SCABBARD,
+	PLAYER_PARTS_HEAD,
+	PLAYER_PARTS_ARM_L,
+	PLAYER_PARTS_ARM_R,
+	PLAYER_PARTS_HAND_L,
+	PLAYER_PARTS_HAND_R,
+	PLAYER_PARTS_LEG_L,
+	PLAYER_PARTS_LEG_R,
+	PLAYER_PARTS_FOOT_L,
+	PLAYER_PARTS_FOOT_R,
+	PLAYER_PARTS_SWORD_R,
+	PLAYER_PARTS_SWORD_B,
+	PLAYER_PARTS_SCABBARD,
 
 	PLAYER_PARTS_MAX
 };
 
 enum
 {
-	ANIM_STOP,
-	ANIM_MOVE,
-	ANIM_DASH,
-	ANIM_JUMP,
-	ANIM_ATTACK,
+	PLAYER_ANIM_STOP,
+	PLAYER_ANIM_MOVE,
+	PLAYER_ANIM_DASH,
+	PLAYER_ANIM_JUMP,
+	PLAYER_ANIM_ATTACK,
 
-	ANIM_MAX
+	PLAYER_ANIM_MAX
 };
 //*****************************************************************************
 // 構造体定義
@@ -70,9 +70,10 @@ public:
 	float				size;
 
 	// 階層アニメーション用のメンバー変数
-	float				time[ANIM_MAX];				// 線形補間用
-	int					tblNo[ANIM_MAX];				// 行動データのテーブル番号
-	int					tblMax[ANIM_MAX];				// そのテーブルのデータ数
+	float				time[PLAYER_ANIM_MAX];				// 線形補間用
+	int					tblNo[PLAYER_ANIM_MAX];				// 行動データのテーブル番号
+	int					tblMax[PLAYER_ANIM_MAX];			// そのテーブルのデータ数
+	int					animNum;							// 現在のアニメーション番号
 
 	BOOL				jump;			// ジャンプフラグ
 	int					jumpCnt;		// ジャンプ中のカウント
@@ -85,6 +86,8 @@ public:
 
 	XMFLOAT3			UpVector;			// 自分が立っている所
 
+	void Animation(int animNum);
+	void Animation(int animNum1, int animNum2);
 };
 
 
@@ -100,6 +103,6 @@ void DrawPlayer(void);
 PLAYER *GetPlayer(void);
 PLAYER* GetPlayerParts(void);
 
-void Animation(int animNum, int i);
-void AnimationBlend(int animNum1, int animNum2, int i);
+//void PlayerAnimation(int animNum, int i);
+//void PlayerAnimationBlend(int animNum1, int animNum2, int i);
 
