@@ -10,8 +10,10 @@
 #include "input.h"
 #include "camera.h"
 #include "player.h"
+#include "enemy.h"
 #include "shadow.h"
 #include "bullet.h"
+#include "collision.h"
 #include "debugproc.h"
 #include "meshfield.h"
 
@@ -28,6 +30,9 @@
 #define	MODEL_PLAYER_FOOT_L	"data/MODEL/player_foot_l.obj"			// 読み込むモデル名
 #define	MODEL_PLAYER_FOOT_R	"data/MODEL/player_foot_r.obj"			// 読み込むモデル名
 #define	MODEL_PLAYER_HEAD	"data/MODEL/player_head.obj"			// 読み込むモデル名
+#define	MODEL_PLAYER_SWORD_R	"data/MODEL/player_sword.obj"			// 読み込むモデル名
+#define	MODEL_PLAYER_SWORD_B	"data/MODEL/player_sword_back.obj"			// 読み込むモデル名
+#define	MODEL_PLAYER_SCABBARD	"data/MODEL/player_scabbard.obj"			// 読み込むモデル名
 
 #define	VALUE_MOVE			(0.5f)							// 移動量
 #define	VALUE_DASH			(2.0f)							// 移動量
@@ -42,29 +47,41 @@
 #define PLAYER_ARM_X		(1.5f)								// 腕のx座標
 #define PLAYER_ARM_Y		(2.5f)								// 腕のy座標
 
-#define PLAYER_HAND_X		(0.0f)								// 腕のx座標
-#define PLAYER_HAND_Y		(-1.5f)								// 腕のy座標
+#define PLAYER_HAND_X		(0.0f)								// 手のx座標
+#define PLAYER_HAND_Y		(-1.5f)								// 手のy座標
 
-#define PLAYER_LEG_X		(1.1f)								// 腕のx座標
-#define PLAYER_LEG_Y		(-2.4f)								// 腕のy座標
+#define PLAYER_LEG_X		(1.1f)								// 脚のx座標
+#define PLAYER_LEG_Y		(-2.4f)								// 脚のy座標
 
-#define PLAYER_FOOT_X		(0.0f)								// 腕のx座標
-#define PLAYER_FOOT_Y		(-1.4f)								// 腕のy座標
+#define PLAYER_FOOT_X		(0.0f)								// 足のx座標
+#define PLAYER_FOOT_Y		(-1.4f)								// 足のy座標
 
-#define PLAYER_JUMP_Y		(50.0f)								// ジャンプ力
-#define PLAYER_JUMP_CNT_MAX	(28.0f)								// ジャンプ全体フレーム
+#define PLAYER_SWORD_R_X	(0.0f)								// 剣のx座標
+#define PLAYER_SWORD_R_Y	(-2.0f)								// 剣のy座標
+
+#define PLAYER_SWORD_B_X	(0.0f)								// 剣(背中)のx座標
+#define PLAYER_SWORD_B_Y	(1.0f)								// 剣(背中)のy座標
+#define PLAYER_SWORD_B_Z	(-1.5f)								// 剣(背中)のz座標
 
 #define ANIM_FRAME_STOP		(15.0f)							// 待機アニメーションの間隔
 #define ANIM_FRAME_MOVE		(30.0f)							// 移動アニメーションの間隔
 #define ANIM_FRAME_DASH		(ANIM_FRAME_MOVE * 0.5f)		// ダッシュアニメーションの間隔
 
 #define ANIM_FRAME_JUMP		(15.0f)								// ジャンプアニメーションの間隔
+#define ANIM_FRAME_ATTACK	(60.0f)								// ジャンプアニメーションの間隔
+
+#define PLAYER_JUMP_Y		(50.0f)								// ジャンプ力
+#define PLAYER_JUMP_CNT_MAX	(ANIM_FRAME_JUMP * 3.0f - 5.0f)			// ジャンプ全体フレーム
+#define PLAYER_ATK_CNT_MAX	(ANIM_FRAME_ATTACK * 3.0f)			// アタック全体フレーム
 
 #define BLEND_FRAME_STOP	(60.0f)							// 待機モーションに遷移するまでの時間
 #define BLEND_FRAME_MOVE	(90.0f)							// 移動モーションに遷移するまでの時間
 #define BLEND_FRAME_DASH	(90.0f)							// ダッシュモーションに遷移するまでの時間
 #define BLEND_FRAME_JUMP	(90.0f)							// ジャンプモーションに遷移するまでの時間
+#define BLEND_FRAME_ATTACK	(90.0f)							// 攻撃モーションに遷移するまでの時間
 
+#define ATTACK_WIDTH		(5.0f)							// 攻撃の当たり判定の幅
+#define ATTACK_DEPTH		(8.0f)							// 攻撃の当たり判定の奥行き
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -132,6 +149,23 @@ static INTERPOLATION_DATA stop_tbl_foot_r[] = {	// pos, rot, scl, frame
 
 };
 
+static INTERPOLATION_DATA stop_tbl_sword_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_STOP },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_STOP },
+};
+
+static INTERPOLATION_DATA stop_tbl_sword_b[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_STOP },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_STOP },
+
+};
+
+static INTERPOLATION_DATA stop_tbl_scabbard[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_STOP },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_STOP },
+
+};
+
 
 static INTERPOLATION_DATA* g_StopTblAdr[] =
 {
@@ -144,6 +178,9 @@ static INTERPOLATION_DATA* g_StopTblAdr[] =
 	stop_tbl_leg_r,
 	stop_tbl_foot_l,
 	stop_tbl_foot_r,
+	stop_tbl_sword_r,
+	stop_tbl_sword_b,
+	stop_tbl_scabbard,
 };
 
 // 歩きアニメデータ
@@ -194,6 +231,23 @@ static INTERPOLATION_DATA move_tbl_foot_r[] = {	// pos, rot, scl, frame
 
 };
 
+static INTERPOLATION_DATA move_tbl_sword_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_MOVE },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_MOVE },
+};
+
+static INTERPOLATION_DATA move_tbl_sword_b[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_MOVE },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_MOVE },
+
+};
+
+static INTERPOLATION_DATA move_tbl_scabbard[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_MOVE },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_MOVE },
+
+};
+
 
 static INTERPOLATION_DATA* g_MoveTblAdr[] =
 {
@@ -206,6 +260,9 @@ static INTERPOLATION_DATA* g_MoveTblAdr[] =
 	move_tbl_leg_r,
 	move_tbl_foot_l,
 	move_tbl_foot_r,
+	move_tbl_sword_r,
+	move_tbl_sword_b,
+	move_tbl_scabbard,
 };
 
 // ダッシュアニメデータ
@@ -256,6 +313,23 @@ static INTERPOLATION_DATA dash_tbl_foot_r[] = {	// pos, rot, scl, frame
 
 };
 
+static INTERPOLATION_DATA dash_tbl_sword_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_DASH },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_DASH },
+};
+
+static INTERPOLATION_DATA dash_tbl_sword_b[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_DASH },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_DASH },
+
+};
+
+static INTERPOLATION_DATA dash_tbl_scabbard[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_DASH },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),		XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_DASH },
+
+};
+
 
 static INTERPOLATION_DATA* g_DashTblAdr[] =
 {
@@ -268,6 +342,9 @@ static INTERPOLATION_DATA* g_DashTblAdr[] =
 	dash_tbl_leg_r,
 	dash_tbl_foot_l,
 	dash_tbl_foot_r,
+	dash_tbl_sword_r,
+	dash_tbl_sword_b,
+	dash_tbl_scabbard,
 };
 
 // ジャンプモーションデータ
@@ -326,6 +403,25 @@ static INTERPOLATION_DATA jump_tbl_foot_r[] = {	// pos, rot, scl, frame
 
 };
 
+static INTERPOLATION_DATA jump_tbl_sword_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+};
+
+static INTERPOLATION_DATA jump_tbl_sword_b[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+
+};
+
+static INTERPOLATION_DATA jump_tbl_scabbard[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+
+};
 
 static INTERPOLATION_DATA* g_JumpTblAdr[] =
 {
@@ -338,6 +434,103 @@ static INTERPOLATION_DATA* g_JumpTblAdr[] =
 	jump_tbl_leg_r,
 	jump_tbl_foot_l,
 	jump_tbl_foot_r,
+	jump_tbl_sword_r,
+	jump_tbl_sword_b,
+	jump_tbl_scabbard,
+};
+
+// ジャンプモーションデータ
+static INTERPOLATION_DATA attack_tbl_head[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(0.0f, PLAYER_HEAD_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(0.0f, PLAYER_HEAD_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_arm_l[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_arm_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f , 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(-RADIAN * 170.0f, RADIAN * 30.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(-RADIAN * 25.0f, -RADIAN * 30.0f, RADIAN * 15.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(-RADIAN * 170.0f, RADIAN * 30.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK},
+};
+
+static INTERPOLATION_DATA attack_tbl_hand_l[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(-PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_hand_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(-RADIAN * 110.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(-RADIAN * 30.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_HAND_X, PLAYER_HAND_Y, 0.0f), XMFLOAT3(-RADIAN * 110.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_leg_l[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_leg_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+
+};
+
+static INTERPOLATION_DATA attack_tbl_foot_l[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_foot_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+
+};
+
+static INTERPOLATION_DATA attack_tbl_sword_r[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_SWORD_R_X, PLAYER_SWORD_R_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+};
+
+static INTERPOLATION_DATA attack_tbl_sword_b[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+
+};
+
+static INTERPOLATION_DATA attack_tbl_scabbard[] = {	// pos, rot, scl, frame
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+	{ XMFLOAT3(PLAYER_SWORD_B_X, PLAYER_SWORD_B_Y, PLAYER_SWORD_B_Z), XMFLOAT3(0.0f, 0.0f, -RADIAN * 30.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
+
+};
+
+static INTERPOLATION_DATA* g_AttackTblAdr[] =
+{
+	attack_tbl_head,
+	attack_tbl_arm_l,
+	attack_tbl_arm_r,
+	attack_tbl_hand_l,
+	attack_tbl_hand_r,
+	attack_tbl_leg_l,
+	attack_tbl_leg_r,
+	attack_tbl_foot_l,
+	attack_tbl_foot_r,
+	attack_tbl_sword_r,
+	attack_tbl_sword_b,
+	attack_tbl_scabbard,
 };
 
 // 選択したアニメーションに移行するフレーム
@@ -346,7 +539,8 @@ static float g_AnimTransFrame[ANIM_MAX] =
 	BLEND_FRAME_STOP,
 	BLEND_FRAME_MOVE,
 	BLEND_FRAME_DASH,
-	BLEND_FRAME_JUMP
+	BLEND_FRAME_JUMP,
+	BLEND_FRAME_ATTACK,
 };
 
 static float g_AnimTransFrameCnt[ANIM_MAX];			// アニメーションに移行するフレームのカウンタ
@@ -366,11 +560,14 @@ HRESULT InitPlayer(void)
 	g_Player.scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	g_Player.spd = 0.0f;			// 移動スピードクリア
+	g_Player.attack = FALSE;		// アタックフラグクリア
+	g_Player.atkVal = 100;			// 攻撃力初期化
+	g_Player.atkCnt = 0;			// 移動スピードクリア
 
 	g_Player.use = TRUE;			// TRUE:生きてる
 	g_Player.size = PLAYER_SIZE;	// 当たり判定の大きさ
-	g_Player.jump = FALSE;
-	g_Player.jumpCnt = 0;
+	g_Player.jump = FALSE;			// ジャンプフラグクリア
+	g_Player.jumpCnt = 0;			// ジャンプカウンタクリア
 
 	// ここでプレイヤー用の影を作成している
 	XMFLOAT3 pos = g_Player.pos;
@@ -426,6 +623,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_HEAD].tblMax[ANIM_DASH] = sizeof(dash_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_HEAD].tblNo[ANIM_JUMP] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_HEAD].tblMax[ANIM_JUMP] = sizeof(jump_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_HEAD].tblNo[ANIM_ATTACK] = PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_HEAD].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_HEAD].load = 1;
 	LoadModel(MODEL_PLAYER_HEAD, &g_Parts[PARTS_HEAD].model);
 
@@ -439,6 +638,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_ARM_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_ARM_L].tblNo[ANIM_JUMP] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_ARM_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_ARM_L].tblNo[ANIM_ATTACK] = PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_ARM_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_ARM_L].load = 1;
 	LoadModel(MODEL_PLAYER_ARM_L, &g_Parts[PARTS_ARM_L].model);
 
@@ -452,6 +653,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_ARM_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_ARM_R].tblNo[ANIM_JUMP] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_ARM_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_ARM_R].tblNo[ANIM_ATTACK] = PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_ARM_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_ARM_R].load = 1;
 	LoadModel(MODEL_PLAYER_ARM_R, &g_Parts[PARTS_ARM_R].model);
 
@@ -465,6 +668,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_HAND_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_HAND_L].tblNo[ANIM_JUMP] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_HAND_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_HAND_L].tblNo[ANIM_ATTACK] = PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_HAND_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_HAND_L].load = 1;
 	LoadModel(MODEL_PLAYER_HAND_L, &g_Parts[PARTS_HAND_L].model);
 
@@ -478,6 +683,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_HAND_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_HAND_R].tblNo[ANIM_JUMP] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_HAND_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_HAND_R].tblNo[ANIM_ATTACK] = PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_HAND_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_HAND_R].load = 1;
 	LoadModel(MODEL_PLAYER_HAND_R, &g_Parts[PARTS_HAND_R].model);
 
@@ -491,6 +698,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_LEG_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_LEG_L].tblNo[ANIM_JUMP] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_LEG_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_LEG_L].tblNo[ANIM_ATTACK] = PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_LEG_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_LEG_L].load = 1;
 	LoadModel(MODEL_PLAYER_LEG_L, &g_Parts[PARTS_LEG_L].model);
 
@@ -504,6 +713,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_LEG_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_LEG_R].tblNo[ANIM_JUMP] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_LEG_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_LEG_R].tblNo[ANIM_ATTACK] = PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_LEG_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_LEG_R].load = 1;
 	LoadModel(MODEL_PLAYER_LEG_R, &g_Parts[PARTS_LEG_R].model);
 
@@ -517,6 +728,8 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_FOOT_L].tblMax[ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_FOOT_L].tblNo[ANIM_JUMP] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_FOOT_L].tblMax[ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_FOOT_L].tblNo[ANIM_ATTACK] = PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_FOOT_L].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_FOOT_L].load = 1;
 	LoadModel(MODEL_PLAYER_FOOT_L, &g_Parts[PARTS_FOOT_L].model);
 
@@ -530,8 +743,56 @@ HRESULT InitPlayer(void)
 	g_Parts[PARTS_FOOT_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_FOOT_R].tblNo[ANIM_JUMP] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
 	g_Parts[PARTS_FOOT_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_FOOT_R].tblNo[ANIM_ATTACK] = PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_FOOT_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
 	g_Parts[PARTS_FOOT_R].load = 1;
 	LoadModel(MODEL_PLAYER_FOOT_R, &g_Parts[PARTS_FOOT_R].model);
+
+	g_Parts[PARTS_SWORD_R].use = FALSE;
+	g_Parts[PARTS_SWORD_R].parent = &g_Parts[PARTS_HAND_R];	// 親をセット
+	g_Parts[PARTS_SWORD_R].tblNo[ANIM_STOP] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_R].tblMax[ANIM_STOP] = sizeof(stop_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_R].tblNo[ANIM_MOVE] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_R].tblMax[ANIM_MOVE] = sizeof(move_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_R].tblNo[ANIM_DASH] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_R].tblMax[ANIM_DASH] = sizeof(dash_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_R].tblNo[ANIM_JUMP] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_R].tblMax[ANIM_JUMP] = sizeof(jump_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_R].tblNo[ANIM_ATTACK] = PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_R].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_R].load = 1;
+	LoadModel(MODEL_PLAYER_SWORD_R, &g_Parts[PARTS_SWORD_R].model);
+
+	g_Parts[PARTS_SWORD_B].use = TRUE;
+	g_Parts[PARTS_SWORD_B].parent = &g_Player;	// 親をセット
+	g_Parts[PARTS_SWORD_B].tblNo[ANIM_STOP] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_B].tblMax[ANIM_STOP] = sizeof(stop_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_B].tblNo[ANIM_MOVE] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_B].tblMax[ANIM_MOVE] = sizeof(move_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_B].tblNo[ANIM_DASH] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_B].tblMax[ANIM_DASH] = sizeof(dash_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_B].tblNo[ANIM_JUMP] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_B].tblMax[ANIM_JUMP] = sizeof(jump_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_B].tblNo[ANIM_ATTACK] = PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SWORD_B].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SWORD_B].load = 1;
+	LoadModel(MODEL_PLAYER_SWORD_B, &g_Parts[PARTS_SWORD_B].model);
+
+	g_Parts[PARTS_SCABBARD].use = TRUE;
+	g_Parts[PARTS_SCABBARD].parent = &g_Player;	// 親をセット
+	g_Parts[PARTS_SCABBARD].tblNo[ANIM_STOP] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SCABBARD].tblMax[ANIM_STOP] = sizeof(stop_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SCABBARD].tblNo[ANIM_MOVE] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SCABBARD].tblMax[ANIM_MOVE] = sizeof(move_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SCABBARD].tblNo[ANIM_DASH] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SCABBARD].tblMax[ANIM_DASH] = sizeof(dash_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SCABBARD].tblNo[ANIM_JUMP] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SCABBARD].tblMax[ANIM_JUMP] = sizeof(jump_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SCABBARD].tblNo[ANIM_ATTACK] = PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+	g_Parts[PARTS_SCABBARD].tblMax[ANIM_ATTACK] = sizeof(attack_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+	g_Parts[PARTS_SCABBARD].load = 1;
+	LoadModel(MODEL_PLAYER_SCABBARD, &g_Parts[PARTS_SCABBARD].model);
+
 	// クォータニオンの初期化
 	XMStoreFloat4(&g_Player.Quaternion, XMQuaternionIdentity());
 
@@ -612,10 +873,16 @@ void UpdatePlayer(void)
 		animNum = ANIM_MOVE;
 	}
 
+	// ダッシュ処理
 	if (GetKeyboardPress(DIK_LSHIFT))
 	{
 		g_Player.spd *= VALUE_DASH;
-		animNum = ANIM_DASH;
+
+		// 移動キーを押している間はダッシュアニメーションをセット
+		if (g_Player.spd >= VALUE_MOVE * VALUE_DASH)
+		{
+			animNum = ANIM_DASH;
+		}
 	}
 
 #ifdef _DEBUG
@@ -659,10 +926,10 @@ void UpdatePlayer(void)
 
 
 	// 弾発射処理
-	if (GetKeyboardTrigger(DIK_SPACE))
-	{
-		SetBullet(g_Player.pos, g_Player.rot);
-	}
+	//if (GetKeyboardTrigger(DIK_SPACE))
+	//{
+	//	SetBullet(g_Player.pos, g_Player.rot);
+	//}
 
 	// 影もプレイヤーの位置に合わせる
 	XMFLOAT3 pos = g_Player.pos;
@@ -696,6 +963,63 @@ void UpdatePlayer(void)
 		g_Player.jumpCnt = 0;
 	}
 
+	ENEMY* enemy = GetEnemy();
+	// アタック処理中
+	if (g_Player.attack == TRUE)
+	{
+		// アタックアニメーションをセット
+		animNum = ANIM_ATTACK;
+		g_Player.atkCnt++;
+		// 剣を抜いたように見えるときだけ手に持つようにセット
+		if ((int)g_Parts[PARTS_ARM_R].time[ANIM_ATTACK] < 1)
+		{
+			g_Parts[PARTS_SWORD_R].use = FALSE;
+			g_Parts[PARTS_SWORD_B].use = TRUE;
+		}
+
+		else
+		{
+			g_Parts[PARTS_SWORD_R].use = TRUE;
+			g_Parts[PARTS_SWORD_B].use = FALSE;
+			XMFLOAT3 pos = g_Player.pos;
+
+			pos.x -= sinf(g_Player.rot.y) * ATTACK_DEPTH * 0.5;
+			pos.z -= cosf(g_Player.rot.y) * ATTACK_DEPTH * 0.5;
+
+			for (int i = 0; i < ENEMY_MAX; i++)
+			{
+				// 生きているエネミーのみ判定
+				if (enemy[i].use == FALSE) continue;
+
+				if (CollisionBC(pos, enemy[i].pos, ATTACK_DEPTH, enemy[i].size))
+				{
+					enemy[i].use = FALSE;
+				}
+			}
+		}
+
+		if (g_Player.atkCnt >= PLAYER_ATK_CNT_MAX)
+		{
+			g_Player.attack = FALSE;
+			g_Player.atkCnt = 0;
+			g_AnimTransFrameCnt[ANIM_ATTACK] = 0.0f;
+
+			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+			{
+				g_Parts[i].time[ANIM_ATTACK] = 0.0f;
+				g_Parts[PARTS_SWORD_R].use = FALSE;
+				g_Parts[PARTS_SWORD_B].use = TRUE;
+			}
+		}
+	}
+	// アタックボタン押した？
+	else if ((g_Player.attack == FALSE) && (GetKeyboardTrigger(DIK_SPACE)))
+	{
+		g_Player.attack = TRUE;
+		g_Player.atkCnt = 0;
+		animNum = ANIM_ATTACK;
+	}
+
 	// 階層アニメーション
 	for (int i = 0; i < PLAYER_PARTS_MAX; i++)
 	{
@@ -703,7 +1027,16 @@ void UpdatePlayer(void)
 		// 線形補間の処理
 		if (g_Player.jump == TRUE)
 		{
-			AnimationBlend(ANIM_JUMP, animNum, i);
+			// アタックアニメーションを優先
+			if (g_Player.attack == TRUE)
+			{
+				AnimationBlend(animNum, ANIM_JUMP, i);
+			}
+
+			else
+			{
+				AnimationBlend(ANIM_JUMP, animNum, i);
+			}
 		}
 
 		else
@@ -884,8 +1217,11 @@ void Animation(int animNum, int i)
 	case ANIM_DASH:
 		tbl = g_DashTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
-	default:
+	case ANIM_JUMP:
 		tbl = g_JumpTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
+		break;
+	default:
+		tbl = g_AttackTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
 		break;
 	}
 
@@ -945,7 +1281,7 @@ void AnimationBlend(int animNum1, int animNum2, int i)
 	int animNum[2] = { animNum1, animNum2 };
 
 	// 使われているなら処理する
-	if ((g_Parts[i].use == TRUE) && (g_Parts[i].tblMax[animNum1] > 0))
+	if (/*(g_Parts[i].use == TRUE) && */(g_Parts[i].tblMax[animNum1] > 0))
 	{
 		INTERPOLATION_DATA* tbl[2];
 		XMVECTOR Pos[2];
@@ -966,8 +1302,11 @@ void AnimationBlend(int animNum1, int animNum2, int i)
 			case ANIM_DASH:
 				tbl[j] = g_DashTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
 				break;
-			default:
+			case ANIM_JUMP:
 				tbl[j] = g_JumpTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
+				break;
+			default:
+				tbl[j] = g_AttackTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
 				break;
 			}
 
@@ -1017,6 +1356,8 @@ void AnimationBlend(int animNum1, int animNum2, int i)
 		{
 			g_AnimTransFrameCnt[animNum1] = g_AnimTransFrame[animNum1];
 			g_AnimNum[i] = animNum1;
+
+			// アニメーションの移行が完了したタイミングでリセット
 			g_Parts[i].time[animNum2] = 0.0f;
 		}
 	}

@@ -26,6 +26,9 @@ enum
 	PARTS_LEG_R,
 	PARTS_FOOT_L,
 	PARTS_FOOT_R,
+	PARTS_SWORD_R,
+	PARTS_SWORD_B,
+	PARTS_SCABBARD,
 
 	PLAYER_PARTS_MAX
 };
@@ -36,6 +39,7 @@ enum
 	ANIM_MOVE,
 	ANIM_DASH,
 	ANIM_JUMP,
+	ANIM_ATTACK,
 
 	ANIM_MAX
 };
@@ -51,7 +55,11 @@ public:
 	XMFLOAT3			scl;				// モデルの大きさ(スケール)
 
 	float				spd;				// 移動スピード
-	
+
+	BOOL				attack;				// アタックフラグ
+	int					atkVal;				// 攻撃力
+	int					atkCnt;				// アタック中のカウント
+
 	BOOL				load;
 	DX11_MODEL			model;				// モデル情報
 
@@ -90,6 +98,8 @@ void UpdatePlayer(void);
 void DrawPlayer(void);
 
 PLAYER *GetPlayer(void);
+PLAYER* GetPlayerParts(void);
+
 void Animation(int animNum, int i);
 void AnimationBlend(int animNum1, int animNum2, int i);
 

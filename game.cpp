@@ -308,7 +308,7 @@ void CheckHit(void)
 	BULLET *bullet = GetBullet();	// 弾のポインターを初期化
 
 	// 敵とプレイヤーキャラ
-	for (int i = 0; i < MAX_ENEMY; i++)
+	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		//敵の有効フラグをチェックする
 		if (enemy[i].use == FALSE)
@@ -335,7 +335,7 @@ void CheckHit(void)
 			continue;
 
 		// 敵と当たってるか調べる
-		for (int j = 0; j < MAX_ENEMY; j++)
+		for (int j = 0; j < ENEMY_MAX; j++)
 		{
 			//敵の有効フラグをチェックする
 			if (enemy[j].use == FALSE)
@@ -362,7 +362,7 @@ void CheckHit(void)
 
 	// エネミーが全部死亡したら状態遷移
 	int enemy_count = 0;
-	for (int i = 0; i < MAX_ENEMY; i++)
+	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		if (enemy[i].use == FALSE) continue;
 		enemy_count++;

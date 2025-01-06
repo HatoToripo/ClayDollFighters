@@ -8,6 +8,7 @@
 #include "renderer.h"
 #include "shadow.h"
 #include "bullet.h"
+#include "player.h"
 
 
 //*****************************************************************************
@@ -15,11 +16,13 @@
 //*****************************************************************************
 #define TEXTURE_MAX			(1)				// テクスチャの数
 
-#define	BULLET_WIDTH		(10.0f)			// 頂点サイズ
-#define	BULLET_HEIGHT		(10.0f)			// 頂点サイズ
+#define	BULLET_WIDTH		(5.0f)			// 頂点サイズ
+#define	BULLET_HEIGHT		(8.0f)			// 頂点サイズ
 
 #define	BULLET_SPEED		(5.0f)			// 弾の移動スピード
 
+#define ATTACK_WIDTH		(5.0f)			// 攻撃の当たり判定の幅
+#define ATTACK_DEPTH		(10.0f)			// 攻撃の当たり判定の奥行き
 
 //*****************************************************************************
 // 構造体定義
@@ -113,27 +116,42 @@ void UninitBullet(void)
 void UpdateBullet(void)
 {
 
+	PLAYER* parts = GetPlayerParts();
+
 	for (int i = 0; i < MAX_BULLET; i++)
 	{
 		if (g_Bullet[i].use)
 		{
 			// 弾の移動処理
-			g_Bullet[i].pos.x -= sinf(g_Bullet[i].rot.y) * g_Bullet[i].spd;
-			g_Bullet[i].pos.z -= cosf(g_Bullet[i].rot.y) * g_Bullet[i].spd;
+			//g_Bullet[i].pos.x -= sinf(g_Bullet[i].rot.y) * g_Bullet[i].spd;
+			//g_Bullet[i].pos.z -= cosf(g_Bullet[i].rot.y) * g_Bullet[i].spd;
 
 			// 影の位置設定
 			SetPositionShadow(g_Bullet[i].shadowIdx, XMFLOAT3(g_Bullet[i].pos.x, 0.1f, g_Bullet[i].pos.z));
 
 
 			// フィールドの外に出たら弾を消す処理
-			if (g_Bullet[i].pos.x < MAP_LEFT
-				|| g_Bullet[i].pos.x > MAP_RIGHT
-				|| g_Bullet[i].pos.z < MAP_DOWN
-				|| g_Bullet[i].pos.z > MAP_TOP)
-			{
-				g_Bullet[i].use = FALSE;
-				ReleaseShadow(g_Bullet[i].shadowIdx);
-			}
+			//if ((int)parts[PARTS_ARM_R].time[ANIM_ATTACK] < 1)
+			//{
+			//	g_Bullet[i].use = FALSE;
+			//	ReleaseShadow(g_Bullet[i].shadowIdx);
+			//}
+			//g_Bullet[i].pos.x -= sinf(g_Bullet[i].rot.y) * g_Bullet[i].spd;
+			//g_Bullet[i].pos.z -= cosf(g_Bullet[i].rot.y) * g_Bullet[i].spd;
+
+			//// 影の位置設定
+			//SetPositionShadow(g_Bullet[i].shadowIdx, XMFLOAT3(g_Bullet[i].pos.x, 0.1f, g_Bullet[i].pos.z));
+
+
+			//// フィールドの外に出たら弾を消す処理
+			//if (g_Bullet[i].pos.x < MAP_LEFT
+			//	|| g_Bullet[i].pos.x > MAP_RIGHT
+			//	|| g_Bullet[i].pos.z < MAP_DOWN
+			//	|| g_Bullet[i].pos.z > MAP_TOP)
+			//{
+			//	g_Bullet[i].use = FALSE;
+			//	ReleaseShadow(g_Bullet[i].shadowIdx);
+			//}
 
 		}
 	}

@@ -32,7 +32,7 @@
 //*****************************************************************************
 // グローバル変数
 //*****************************************************************************
-static ENEMY			g_Enemy[MAX_ENEMY];				// エネミー
+static ENEMY			g_Enemy[ENEMY_MAX];				// エネミー
 
 int g_Enemy_load = 0;
 
@@ -58,7 +58,7 @@ static INTERPOLATION_DATA* g_MoveTblAdr[] =
 //=============================================================================
 HRESULT InitEnemy(void)
 {
-	for (int i = 0; i < MAX_ENEMY; i++)
+	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		LoadModel(MODEL_ENEMY, &g_Enemy[i].model);
 		g_Enemy[i].load = TRUE;
@@ -99,7 +99,7 @@ HRESULT InitEnemy(void)
 void UninitEnemy(void)
 {
 
-	for (int i = 0; i < MAX_ENEMY; i++)
+	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		if (g_Enemy[i].load)
 		{
@@ -116,7 +116,7 @@ void UninitEnemy(void)
 void UpdateEnemy(void)
 {
 	// エネミーを動かく場合は、影も合わせて動かす事を忘れないようにね！
-	for (int i = 0; i < MAX_ENEMY; i++)
+	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		if (g_Enemy[i].use == TRUE)		// このエネミーが使われている？
 		{								// Yes
@@ -209,7 +209,7 @@ void DrawEnemy(void)
 
 	SetRimLight(1);
 
-	for (int i = 0; i < MAX_ENEMY; i++)
+	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		if (g_Enemy[i].use == FALSE) continue;
 
