@@ -19,8 +19,10 @@
 #include "meshwall.h"
 #include "shadow.h"
 #include "tree.h"
+#include "mark.h"
 #include "bullet.h"
 #include "score.h"
+#include "ui.h"
 #include "particle.h"
 #include "collision.h"
 #include "debugproc.h"
@@ -88,11 +90,17 @@ HRESULT InitGame(void)
 	// 木を生やす
 	InitTree();
 
+	// 検知マークの初期化
+	InitMark();
+
 	// 弾の初期化
 	InitBullet();
 
 	// スコアの初期化
 	InitScore();
+
+	// UIの初期化
+	InitUI();
 
 	// パーティクルの初期化
 	InitParticle();
@@ -111,11 +119,17 @@ void UninitGame(void)
 	// パーティクルの終了処理
 	UninitParticle();
 
+	// UIの終了処理
+	UninitUI();
+
 	// スコアの終了処理
 	UninitScore();
 
 	// 弾の終了処理
 	UninitBullet();
+
+	// 検知マークの終了処理
+	UninitMark();
 
 	// 木の終了処理
 	UninitTree();
@@ -175,6 +189,9 @@ void UpdateGame(void)
 	// 木の更新処理
 	UpdateTree();
 
+	// 検知マークの更新処理
+	UpdateMark();
+
 	// 弾の更新処理
 	UpdateBullet();
 
@@ -189,6 +206,9 @@ void UpdateGame(void)
 
 	// スコアの更新処理
 	UpdateScore();
+
+	// UIの更新処理
+	UpdateUI();
 }
 
 //=============================================================================
@@ -218,6 +238,9 @@ void DrawGame0(void)
 	// 木の描画処理
 	DrawTree();
 
+	// 検知マークの描画処理
+	DrawMark();
+
 	// パーティクルの描画処理
 	DrawParticle();
 
@@ -232,6 +255,8 @@ void DrawGame0(void)
 	// スコアの描画処理
 	DrawScore();
 
+	// UIの描画処理
+	DrawUI();
 
 	// ライティングを有効に
 	SetLightEnable(TRUE);
@@ -318,6 +343,8 @@ void CheckHit(void)
 		if (CollisionBC(player->pos, enemy[i].pos, player->size, enemy[i].size))
 		{
 			// 敵キャラクターは倒される
+			player->hp--;
+			player->gauge += 1.0f;
 			enemy[i].use = FALSE;
 			ReleaseShadow(enemy[i].shadowIdx);
 

@@ -19,8 +19,8 @@
 //*****************************************************************************
 #define TEXTURE_MAX			(1)			// テクスチャの数
 
-#define	PARTICLE_SIZE_X		(40.0f)		// 頂点サイズ
-#define	PARTICLE_SIZE_Y		(40.0f)		// 頂点サイズ
+#define	PARTICLE_SIZE_X		(5.0f)		// 頂点サイズ
+#define	PARTICLE_SIZE_Y		(5.0f)		// 頂点サイズ
 #define	VALUE_MOVE_PARTICLE	(5.0f)		// 移動速度
 
 #define	MAX_PARTICLE		(512)		// パーティクル最大数
@@ -62,7 +62,7 @@ static int							g_TexNo;					// テクスチャ番号
 static PARTICLE					g_aParticle[MAX_PARTICLE];		// パーティクルワーク
 static XMFLOAT3					g_posBase;						// ビルボード発生位置
 static float					g_fWidthBase = 5.0f;			// 基準の幅
-static float					g_fHeightBase = 10.0f;			// 基準の高さ
+static float					g_fHeightBase = 5.0f;			// 基準の高さ
 static float					g_roty = 0.0f;					// 移動方向
 static float					g_spd = 0.0f;					// 移動スピード
 
@@ -153,7 +153,7 @@ void UninitParticle(void)
 //=============================================================================
 void UpdateParticle(void)
 {
-	//PLAYER *pPlayer = GetPlayer();
+	PLAYER* player = GetPlayer();
 	//g_posBase = pPlayer->pos;
 
 	{
@@ -161,10 +161,22 @@ void UpdateParticle(void)
 		{
 			if(g_aParticle[nCntParticle].use)
 			{// 使用中
-				g_aParticle[nCntParticle].pos.x += g_aParticle[nCntParticle].move.x;
-				g_aParticle[nCntParticle].pos.z += g_aParticle[nCntParticle].move.z;
+				if (g_aParticle[nCntParticle].move.y > 0.0f)
+				{
+					g_aParticle[nCntParticle].pos.x += g_aParticle[nCntParticle].move.x;
+					g_aParticle[nCntParticle].pos.z += g_aParticle[nCntParticle].move.z;
 
-				g_aParticle[nCntParticle].pos.y += g_aParticle[nCntParticle].move.y;
+					g_aParticle[nCntParticle].pos.y += g_aParticle[nCntParticle].move.y;
+				}
+				else
+				{
+					float x = (player->pos.x - g_aParticle[nCntParticle].pos.x);
+					float z = (player->pos.z - g_aParticle[nCntParticle].pos.z);
+					float rad = atan2f(z, x);
+					g_aParticle[nCntParticle].pos.x = cosf(rad) * g_aParticle[nCntParticle].move.x;
+					g_aParticle[nCntParticle].pos.y += g_aParticle[nCntParticle].move.y;
+					g_aParticle[nCntParticle].pos.z = cosf(rad) * g_aParticle[nCntParticle].move.z;
+				}
 				if(g_aParticle[nCntParticle].pos.y <= g_aParticle[nCntParticle].fSizeY / 2)
 				{// 着地した
 					g_aParticle[nCntParticle].pos.y = g_aParticle[nCntParticle].fSizeY / 2;

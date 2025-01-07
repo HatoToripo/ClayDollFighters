@@ -5,14 +5,14 @@
 //
 //=============================================================================
 #pragma once
-
+#include "model.h"
 
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-#define ENEMY_MAX		(1)					// エネミーの数
+#define ENEMY_MAX		(3)					// エネミーの数
 
-#define	ENEMY_SIZE		(5.0f)				// 当たり判定の大きさ
+#define	ENEMY_SIZE		(4.0f)				// 当たり判定の大きさ
 
 enum
 {
@@ -61,16 +61,21 @@ public:
 	float				spd;				// 移動スピード
 	float				size;				// 当たり判定の大きさ
 	int					shadowIdx;			// 影のインデックス番号
+	BOOL				look;				// プレイヤーを発見した状態
 
 	// 階層アニメーション用のメンバー変数
 	float				time[ENEMY_ANIM_MAX];				// 線形補間用
 	int					tblNo[ENEMY_ANIM_MAX];				// 行動データのテーブル番号
 	int					tblMax[ENEMY_ANIM_MAX];				// そのテーブルのデータ数
-
+	int					animNum;							// 現在のアニメーション番号
 
 	// 親は、NULL、子供は親のアドレスを入れる
 	ENEMY* parent;			// 自分が親ならNULL、自分が子供なら親のplayerアドレス
 
+	// アニメーション関数
+	void Animation(int animNum);
+	void BodyAnimation(int i);
+	void Animation(int animNum1, int animNum2);
 };
 
 //*****************************************************************************
@@ -83,3 +88,4 @@ void DrawEnemy(void);
 
 ENEMY *GetEnemy(void);
 
+HRESULT MakeVertexLookFlg(void);

@@ -68,7 +68,7 @@
 #define ANIM_FRAME_DASH		(ANIM_FRAME_MOVE * 0.5f)		// ダッシュアニメーションの間隔
 
 #define ANIM_FRAME_JUMP		(15.0f)								// ジャンプアニメーションの間隔
-#define ANIM_FRAME_ATTACK	(60.0f)								// ジャンプアニメーションの間隔
+#define ANIM_FRAME_ATTACK	(15.0f)								// ジャンプアニメーションの間隔
 
 #define PLAYER_JUMP_Y		(50.0f)								// ジャンプ力
 #define PLAYER_JUMP_CNT_MAX	(ANIM_FRAME_JUMP * 3.0f - 5.0f)			// ジャンプ全体フレーム
@@ -558,8 +558,11 @@ HRESULT InitPlayer(void)
 	g_Player.scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	g_Player.spd = 0.0f;			// 移動スピードクリア
+	g_Player.hp = 10;				// 体力の初期化
+	g_Player.gauge = 0.0f;			// 体力の初期化
+
 	g_Player.attack = FALSE;		// アタックフラグクリア
-	g_Player.atkVal = 100;			// 攻撃力初期化
+	g_Player.atkVal = 1;			// 攻撃力初期化
 	g_Player.atkCnt = 0;			// 移動スピードクリア
 
 	g_Player.use = TRUE;			// TRUE:生きてる
@@ -906,7 +909,6 @@ void UpdatePlayer(void)
 		g_Player.pos.z -= cosf(g_Player.rot.y) * g_Player.spd;
 	}
 
-
 	// レイキャストして足元の高さを求める
 	XMFLOAT3 HitPosition;		// 交点
 	XMFLOAT3 Normal;			// ぶつかったポリゴンの法線ベクトル（向き）
@@ -920,7 +922,6 @@ void UpdatePlayer(void)
 		g_Player.pos.y = PLAYER_OFFSET_Y;
 		Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	}
-
 
 	// 弾発射処理
 	//if (GetKeyboardTrigger(DIK_SPACE))
@@ -1260,7 +1261,9 @@ void PLAYER::Animation(int animNum)
 
 }
 
-
+//=============================================================================
+// モーションブレンド関数
+//=============================================================================
 void PLAYER::Animation(int animNum1, int animNum2)
 {
 	// アニメーション番号が同じだった場合

@@ -14,6 +14,7 @@
 #define MAX_PLAYER		(1)					// プレイヤーの数
 
 #define	PLAYER_SIZE		(5.0f)				// 当たり判定の大きさ
+#define	PLAYER_HP_MAX	(10)				// プレイヤーの体力の最大値
 
 enum
 {
@@ -54,6 +55,8 @@ public:
 	XMFLOAT3			rot;				// モデルの向き(回転)
 	XMFLOAT3			scl;				// モデルの大きさ(スケール)
 
+	int					hp;					// 体力
+	float				gauge;				// ゲージ
 	float				spd;				// 移動スピード
 
 	BOOL				attack;				// アタックフラグ
