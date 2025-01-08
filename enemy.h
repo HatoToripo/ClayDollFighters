@@ -58,7 +58,10 @@ public:
 	DX11_MODEL			model;				// モデル情報
 	XMFLOAT4			diffuse[MODEL_MAX_MATERIAL];	// モデルの色
 
+	int					hp;					// エネミーの体力
+	int					atk;				// エネミーの攻撃力
 	float				spd;				// 移動スピード
+	int					colCnt;				// 無敵時間
 	float				size;				// 当たり判定の大きさ
 	int					shadowIdx;			// 影のインデックス番号
 	BOOL				look;				// プレイヤーを発見した状態
@@ -76,6 +79,7 @@ public:
 	void Animation(int animNum);
 	void BodyAnimation(int i);
 	void Animation(int animNum1, int animNum2);
+	int DecHP(int atk);
 };
 
 //*****************************************************************************
@@ -87,5 +91,3 @@ void UpdateEnemy(void);
 void DrawEnemy(void);
 
 ENEMY *GetEnemy(void);
-
-HRESULT MakeVertexLookFlg(void);

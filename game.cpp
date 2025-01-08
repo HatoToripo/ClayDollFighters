@@ -24,6 +24,7 @@
 #include "score.h"
 #include "ui.h"
 #include "particle.h"
+#include "effect.h"
 #include "collision.h"
 #include "debugproc.h"
 
@@ -105,6 +106,9 @@ HRESULT InitGame(void)
 	// パーティクルの初期化
 	InitParticle();
 
+	// エフェクトの初期化
+	InitEffect();
+
 	// BGM再生
 	//PlaySound(SOUND_LABEL_BGM_sample001);
 
@@ -116,6 +120,9 @@ HRESULT InitGame(void)
 //=============================================================================
 void UninitGame(void)
 {
+	// エフェクトの終了処理
+	UninitEffect();
+
 	// パーティクルの終了処理
 	UninitParticle();
 
@@ -198,6 +205,9 @@ void UpdateGame(void)
 	// パーティクルの更新処理
 	UpdateParticle();
 
+	// エフェクトの更新処理
+	UpdateEffect();
+
 	// 影の更新処理
 	UpdateShadow();
 
@@ -244,6 +254,8 @@ void DrawGame0(void)
 	// パーティクルの描画処理
 	DrawParticle();
 
+	// エフェクトの描画処理
+	DrawEffect();
 
 	// 2Dの物を描画する処理
 	// Z比較なし
@@ -336,23 +348,19 @@ void CheckHit(void)
 	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		//敵の有効フラグをチェックする
-		if (enemy[i].use == FALSE)
-			continue;
+		if (enemy[i].use == FALSE) continue;
 
-		//BCの当たり判定
-		if (CollisionBC(player->pos, enemy[i].pos, player->size, enemy[i].size))
+		// 無敵判定チェック
+		if (player->colCnt == 0)
 		{
-			// 敵キャラクターは倒される
-			player->hp--;
-			player->gauge += 1.0f;
-			enemy[i].use = FALSE;
-			ReleaseShadow(enemy[i].shadowIdx);
-
-			// スコアを足す
-			AddScore(100);
+			//BCの当たり判定
+			if (CollisionBC(player->pos, enemy[i].pos, player->size, enemy[i].size))
+			{
+				// プレイヤーにダメージ
+				player->DecHP(enemy[i].atk);
+			}
 		}
 	}
-
 
 	// プレイヤーの弾と敵
 	for (int i = 0; i < MAX_BULLET; i++)

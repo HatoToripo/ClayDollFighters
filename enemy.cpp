@@ -10,6 +10,8 @@
 #include "debugproc.h"
 #include "enemy.h"
 #include "player.h"
+#include "particle.h"
+#include "effect.h"
 #include "camera.h"
 #include "collision.h"
 #include "shadow.h"
@@ -31,10 +33,13 @@
 //#define	MODEL_ENEMY_SWORD_B	"data/MODEL/enemy_sword_back.obj"			// 読み込むモデル名
 //#define	MODEL_ENEMY_SCABBARD	"data/MODEL/enemy_scabbard.obj"			// 読み込むモデル名
 
-#define	VALUE_MOVE			(0.5f)						// 移動量
+#define	VALUE_MOVE			(0.2f)						// 移動量
 #define	VALUE_ROTATE		(XM_PI * 0.02f)				// 回転量
 #define	VALUE_DISTANCE		(100.0f)					// 動く距離
 #define	VALUE_FRAME			(VALUE_DISTANCE / VALUE_MOVE)	// 動く距離
+
+#define	BARRIER_FRAME		(40)						// 無敵時間
+#define	BARRIER_WHITE		(BARRIER_FRAME / 5)			// 無敵時間の点滅間隔
 
 #define ENEMY_SHADOW_SIZE	(0.4f)						// 影の大きさ
 #define ENEMY_OFFSET_Y		(7.0f)						// エネミーの足元をあわせる
@@ -357,18 +362,18 @@ static int g_AnimNum[ENEMY_PARTS_MAX];		// 現在のアニメーション番号
 
 static INTERPOLATION_DATA g_MoveTbl0[ENEMY_MAX][MOVE_TBL_MAX] = {	// pos, rot, scl, frame
 	{
-		{ XMFLOAT3(0.0f, ENEMY_OFFSET_Y,  20.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
+		{ XMFLOAT3(0.0f, ENEMY_OFFSET_Y, 100.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
 		{ XMFLOAT3(g_MoveTbl0[0][0].pos.x - VALUE_DISTANCE, ENEMY_OFFSET_Y, g_MoveTbl0[0][0].pos.z), XMFLOAT3(0.0f, RADIAN * 180.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
 	},
 
 	{
-		{ XMFLOAT3(50.0f, ENEMY_OFFSET_Y,  20.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
-		{ XMFLOAT3(g_MoveTbl0[1][0].pos.x, ENEMY_OFFSET_Y, g_MoveTbl0[0][0].pos.z + VALUE_DISTANCE), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
+		{ XMFLOAT3(100.0f, ENEMY_OFFSET_Y, 100.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
+		{ XMFLOAT3(g_MoveTbl0[1][0].pos.x, ENEMY_OFFSET_Y, g_MoveTbl0[1][0].pos.z + VALUE_DISTANCE), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
 	},
 
 	{
-		{ XMFLOAT3(-50.0f, ENEMY_OFFSET_Y,  100.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
-		{ XMFLOAT3(g_MoveTbl0[2][0].pos.x + VALUE_DISTANCE, ENEMY_OFFSET_Y, g_MoveTbl0[0][0].pos.z), XMFLOAT3(0.0f, RADIAN * 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
+		{ XMFLOAT3(-100.0f, ENEMY_OFFSET_Y, 100.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
+		{ XMFLOAT3(g_MoveTbl0[2][0].pos.x + VALUE_DISTANCE, ENEMY_OFFSET_Y, g_MoveTbl0[2][0].pos.z), XMFLOAT3(0.0f, RADIAN * 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), VALUE_FRAME },
 	},
 };
 
@@ -391,11 +396,14 @@ HRESULT InitEnemy(void)
 		LoadModel(MODEL_ENEMY, &g_Enemy[i].model);
 		g_Enemy[i].load = TRUE;
 
-		g_Enemy[i].pos = XMFLOAT3(-50.0f + i * 30.0f, 7.0f, 20.0f);
+		g_Enemy[i].pos = XMFLOAT3(-100.0f + i * 100.0f, ENEMY_OFFSET_Y, 20.0f);
 		g_Enemy[i].rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		g_Enemy[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
+		g_Enemy[i].hp  = 2;				// 体力初期化
+		g_Enemy[i].atk  = 1;			// 攻撃力初期化
 		g_Enemy[i].spd  = 0.0f;			// 移動スピードクリア
+		g_Enemy[i].colCnt  = 0;			// 無敵時間クリア
 		g_Enemy[i].size = ENEMY_SIZE;	// 当たり判定の大きさ
 
 		// モデルのディフューズを保存しておく。色変え対応の為。
@@ -618,7 +626,62 @@ void UpdateEnemy(void)
 	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		if (g_Enemy[i].use == TRUE)		// このエネミーが使われている？
-		{								// Yes
+		{
+			// 無敵判定中は色を点滅させる
+			if (g_Enemy[i].colCnt > 0)
+			{
+				if (g_Enemy[i].colCnt % BARRIER_WHITE == 0)
+				{
+					for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
+					{
+						SetModelDiffuse(&g_Enemy[i].model, j, XMFLOAT4(10.0f, 10.0f, 10.0f, 1.0f));
+					}
+
+					for (int j = 0; j < ENEMY_PARTS_MAX; j++)
+					{
+						for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+						{
+							SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(10.0f, 10.0f, 10.0f, 1.0f));
+						}
+					}
+				}
+
+				else
+				{
+					for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
+					{
+						SetModelDiffuse(&g_Enemy[i].model, j, g_Enemy[i].diffuse[j]);
+					}
+
+					for (int j = 0; j < ENEMY_PARTS_MAX; j++)
+					{
+						for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+						{
+							SetModelDiffuse(&g_Parts[i][j].model, k, g_Enemy[i].diffuse[k]);
+						}
+					}
+				}
+
+				// 無敵判定が終わるタイミングで色をもとに戻す
+				g_Enemy[i].colCnt++;
+				if (g_Enemy[i].colCnt > BARRIER_FRAME)
+				{
+					g_Enemy[i].colCnt = 0;
+					for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
+					{
+						SetModelDiffuse(&g_Enemy[i].model, j, g_Enemy[i].diffuse[0]);
+					}
+
+					for (int j = 0; j < ENEMY_PARTS_MAX; j++)
+					{
+						for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+						{
+							SetModelDiffuse(&g_Parts[i][j].model, k, g_Enemy[i].diffuse[0]);
+						}
+					}
+				}
+			}
+
 			// プレイヤーが検知範囲内にいるかチェック
 			float x = (player[0].pos.x - g_Enemy[i].pos.x);
 			float z = (player[0].pos.z - g_Enemy[i].pos.z);
@@ -639,15 +702,26 @@ void UpdateEnemy(void)
 					g_MoveTbl0[i][0].pos.x = g_Enemy[i].pos.x;
 					g_MoveTbl0[i][0].pos.z = g_Enemy[i].pos.z;
 				}
+
 				g_Enemy[i].look = FALSE;
 			}
 
 			if (g_Enemy[i].look == TRUE)
 			{
 				// プレイヤーをホーミングする動き
+				XMFLOAT3 oldPos = g_Enemy[i].pos;
 				g_Enemy[i].pos.x += cosf(rad) * VALUE_MOVE;
 				g_Enemy[i].pos.z += sinf(rad) * VALUE_MOVE;
 
+				// エネミー同士が重ならないようにする
+				for (int j = 0; j < ENEMY_MAX; j++)
+				{
+					if (i == j || g_Enemy[j].use == FALSE) continue;
+					if (CollisionBC(g_Enemy[i].pos, g_Enemy[j].pos, g_Enemy[i].size, g_Enemy[j].size))
+					{
+						g_Enemy[i].pos = oldPos;
+					}
+				}
 			}
 
 			else
@@ -1001,6 +1075,31 @@ void ENEMY::BodyAnimation(int i)
 			time[0] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
 		}
 	}
+}
+
+int ENEMY::DecHP(int atk)
+{
+	hp -= atk;
+	colCnt++;
+
+	// 体力がなくなったらパーティクルなどをセット
+	if (hp <= 0)
+	{
+		use = false;
+		ReleaseShadow(shadowIdx);
+		for (int i = 0; i < 10; i++)
+		{
+			SetParticle(pos, XMFLOAT4(0.8f, 0.7f, 0.2f, 0.85f));
+		}
+		SetEffect(XMFLOAT3(pos.x, pos.y - ENEMY_OFFSET_Y * EFFECT_HEIGHT / 15.0f, pos.z), EFFECT_WIDTH, EFFECT_HEIGHT, EFECT_DEAD);
+		return 1;
+	}
+
+	else
+	{
+		SetEffect(XMFLOAT3(pos.x, pos.y - ENEMY_OFFSET_Y * EFFECT_HEIGHT / 15.0f, pos.z), EFFECT_WIDTH, EFFECT_HEIGHT, EFECT_HIT);
+	}
+	return 0;
 }
 
 //=============================================================================

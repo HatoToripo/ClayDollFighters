@@ -13,7 +13,7 @@
 //*****************************************************************************
 #define MAX_PLAYER		(1)					// プレイヤーの数
 
-#define	PLAYER_SIZE		(5.0f)				// 当たり判定の大きさ
+#define	PLAYER_SIZE		(3.0f)				// 当たり判定の大きさ
 #define	PLAYER_HP_MAX	(10)				// プレイヤーの体力の最大値
 
 enum
@@ -56,8 +56,9 @@ public:
 	XMFLOAT3			scl;				// モデルの大きさ(スケール)
 
 	int					hp;					// 体力
-	float				gauge;				// ゲージ
+	int					gauge;				// ゲージ
 	float				spd;				// 移動スピード
+	int					colCnt;				// 無敵時間
 
 	BOOL				attack;				// アタックフラグ
 	int					atkVal;				// 攻撃力
@@ -65,6 +66,7 @@ public:
 
 	BOOL				load;
 	DX11_MODEL			model;				// モデル情報
+	XMFLOAT4			diffuse[MODEL_MAX_MATERIAL];	// モデルの色
 
 	int					shadowIdx;			// 影のインデックス番号
 
@@ -91,6 +93,7 @@ public:
 
 	void Animation(int animNum);
 	void Animation(int animNum1, int animNum2);
+	void DecHP(int atk);
 };
 
 

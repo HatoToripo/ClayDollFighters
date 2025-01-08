@@ -13,13 +13,12 @@
 // マクロ定義
 //*****************************************************************************
 #define	POS_X_CAM			(0.0f)			// カメラの初期位置(X座標)
-#define	POS_Y_CAM			(50.0f)			// カメラの初期位置(Y座標)
-#define	POS_Z_CAM			(-140.0f)		// カメラの初期位置(Z座標)
+#define	POS_Y_CAM			(32.0f)			// カメラの初期位置(Y座標)
+#define	POS_Z_CAM			(-60.0f)		// カメラの初期位置(Z座標)
 
-//#define	POS_X_CAM		(0.0f)			// カメラの初期位置(X座標)
-//#define	POS_Y_CAM		(200.0f)		// カメラの初期位置(Y座標)
-//#define	POS_Z_CAM		(-400.0f)		// カメラの初期位置(Z座標)
-
+//#define	POS_X_CAM			(0.0f)			// カメラの初期位置(X座標)
+//#define	POS_Y_CAM			(50.0f)			// カメラの初期位置(Y座標)
+//#define	POS_Z_CAM			(-140.0f)		// カメラの初期位置(Z座標)
 
 #define	VIEW_ANGLE		(XMConvertToRadians(45.0f))						// ビュー平面の視野角
 #define	VIEW_ASPECT		((float)SCREEN_WIDTH / (float)SCREEN_HEIGHT)	// ビュー平面のアスペクト比	
@@ -169,6 +168,8 @@ void UpdateCamera(void)
 
 #ifdef _DEBUG	// デバッグ情報を表示する
 	PrintDebugProc("Camera:ZC QE TB YN UM R\n");
+	PrintDebugProc("Camera:POS %f, %f, %f\n ", g_Camera.pos.x, g_Camera.pos.y, g_Camera.pos.z);
+	PrintDebugProc("Camera:AT %f, %f, %f\n ", g_Camera.at.x, g_Camera.at.y, g_Camera.at.z);
 #endif
 }
 

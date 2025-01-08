@@ -1,6 +1,6 @@
 //=============================================================================
 //
-// 木処理 [tree.cpp]
+// エフェクト処理 [effect.cpp]
 // Author : 
 //
 //=============================================================================
@@ -9,49 +9,27 @@
 #include "input.h"
 #include "camera.h"
 #include "shadow.h"
-#include "tree.h"
+#include "effect.h"
 #include "enemy.h"
 
 
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-#define TEXTURE_MAX			(5)				// テクスチャの数
+#define EFFECT_FRAME		(30)
+#define TEXTURE_MAX			(EFFECT_FRAME * EFECT_NUM)				// テクスチャの数
 
-#define	TREE_WIDTH			(10.0f)			// 頂点サイズ
-#define	TREE_HEIGHT			(20.0f)			// 頂点サイズ
-
-#define	MAX_TREE			(3)			// 木最大数
+#define	EFFECT_MAX			(20)				// エフェクト最大数
 
 //*****************************************************************************
 // 構造体定義
 //*****************************************************************************
-typedef struct
-{
-	XMFLOAT3	pos;			// 位置
-	XMFLOAT3	scl;			// スケール
-	MATERIAL	material;		// マテリアル
-	float		fWidth;			// 幅
-	float		fHeight;		// 高さ
-	int			nIdxShadow;		// 影ID
-	BOOL		use;			// 使用しているかどうか
 
-} TREE;
-
-class LOOK
-{
-public:
-	XMFLOAT3	pos;			// 位置
-	XMFLOAT3	scl;			// スケール
-	MATERIAL	material;		// マテリアル
-	float		width;			// 幅
-	float		height;			// 高さ
-};
 
 //*****************************************************************************
 // プロトタイプ宣言
 //*****************************************************************************
-HRESULT MakeVertexTree(void);
+HRESULT MakeVertexEffect(void);
 
 //*****************************************************************************
 // グローバル変数
@@ -59,7 +37,7 @@ HRESULT MakeVertexTree(void);
 static ID3D11Buffer					*g_VertexBuffer = NULL;	// 頂点バッファ
 static ID3D11ShaderResourceView		*g_Texture[TEXTURE_MAX] = { NULL };	// テクスチャ情報
 
-static TREE					g_aTree[MAX_TREE];	// 木ワーク
+static EFFECT					g_aEffect[EFFECT_MAX];	// 木ワーク
 static BOOL					g_bAlpaTest;		// アルファテストON/OFF
 
 static int					g_TexNo;			// テクスチャ番号
@@ -67,19 +45,75 @@ static int					g_TexAnim;			// テクスチャアニメ用
 
 static char *g_TextureName[] =
 {
-	"data/TEXTURE/tree001.png",
-	"data/TEXTURE/tree002.png",
-	"data/TEXTURE/tree003.png",
-	"data/TEXTURE/tree004.png",
-	"data/TEXTURE/tree005.png",
+	"data/Effect_BigHit/Effect_BigHit_1_000.png",
+	"data/Effect_BigHit/Effect_BigHit_1_001.png",
+	"data/Effect_BigHit/Effect_BigHit_1_002.png",
+	"data/Effect_BigHit/Effect_BigHit_1_003.png",
+	"data/Effect_BigHit/Effect_BigHit_1_004.png",
+	"data/Effect_BigHit/Effect_BigHit_1_005.png",
+	"data/Effect_BigHit/Effect_BigHit_1_006.png",
+	"data/Effect_BigHit/Effect_BigHit_1_007.png",
+	"data/Effect_BigHit/Effect_BigHit_1_008.png",
+	"data/Effect_BigHit/Effect_BigHit_1_009.png",
+	"data/Effect_BigHit/Effect_BigHit_1_010.png",
+	"data/Effect_BigHit/Effect_BigHit_1_011.png",
+	"data/Effect_BigHit/Effect_BigHit_1_012.png",
+	"data/Effect_BigHit/Effect_BigHit_1_013.png",
+	"data/Effect_BigHit/Effect_BigHit_1_014.png",
+	"data/Effect_BigHit/Effect_BigHit_1_015.png",
+	"data/Effect_BigHit/Effect_BigHit_1_016.png",
+	"data/Effect_BigHit/Effect_BigHit_1_017.png",
+	"data/Effect_BigHit/Effect_BigHit_1_018.png",
+	"data/Effect_BigHit/Effect_BigHit_1_019.png",
+	"data/Effect_BigHit/Effect_BigHit_1_020.png",
+	"data/Effect_BigHit/Effect_BigHit_1_021.png",
+	"data/Effect_BigHit/Effect_BigHit_1_022.png",
+	"data/Effect_BigHit/Effect_BigHit_1_023.png",
+	"data/Effect_BigHit/Effect_BigHit_1_024.png",
+	"data/Effect_BigHit/Effect_BigHit_1_025.png",
+	"data/Effect_BigHit/Effect_BigHit_1_026.png",
+	"data/Effect_BigHit/Effect_BigHit_1_027.png",
+	"data/Effect_BigHit/Effect_BigHit_1_028.png",
+	"data/Effect_BigHit/Effect_BigHit_1_029.png",
+
+	"data/Effect_Explosion/Effect_Explosion_1_000.png",
+	"data/Effect_Explosion/Effect_Explosion_1_001.png",
+	"data/Effect_Explosion/Effect_Explosion_1_002.png",
+	"data/Effect_Explosion/Effect_Explosion_1_003.png",
+	"data/Effect_Explosion/Effect_Explosion_1_004.png",
+	"data/Effect_Explosion/Effect_Explosion_1_005.png",
+	"data/Effect_Explosion/Effect_Explosion_1_006.png",
+	"data/Effect_Explosion/Effect_Explosion_1_007.png",
+	"data/Effect_Explosion/Effect_Explosion_1_008.png",
+	"data/Effect_Explosion/Effect_Explosion_1_009.png",
+	"data/Effect_Explosion/Effect_Explosion_1_010.png",
+	"data/Effect_Explosion/Effect_Explosion_1_011.png",
+	"data/Effect_Explosion/Effect_Explosion_1_012.png",
+	"data/Effect_Explosion/Effect_Explosion_1_013.png",
+	"data/Effect_Explosion/Effect_Explosion_1_014.png",
+	"data/Effect_Explosion/Effect_Explosion_1_015.png",
+	"data/Effect_Explosion/Effect_Explosion_1_016.png",
+	"data/Effect_Explosion/Effect_Explosion_1_017.png",
+	"data/Effect_Explosion/Effect_Explosion_1_018.png",
+	"data/Effect_Explosion/Effect_Explosion_1_019.png",
+	"data/Effect_Explosion/Effect_Explosion_1_020.png",
+	"data/Effect_Explosion/Effect_Explosion_1_021.png",
+	"data/Effect_Explosion/Effect_Explosion_1_022.png",
+	"data/Effect_Explosion/Effect_Explosion_1_023.png",
+	"data/Effect_Explosion/Effect_Explosion_1_024.png",
+	"data/Effect_Explosion/Effect_Explosion_1_025.png",
+	"data/Effect_Explosion/Effect_Explosion_1_026.png",
+	"data/Effect_Explosion/Effect_Explosion_1_027.png",
+	"data/Effect_Explosion/Effect_Explosion_1_028.png",
+	"data/Effect_Explosion/Effect_Explosion_1_029.png",
 };
 
 //=============================================================================
 // 初期化処理
 //=============================================================================
-HRESULT InitTree(void)
+HRESULT InitEffect(void)
 {
-	MakeVertexTree();
+	MakeVertexEffect();
 
 	// テクスチャ生成
 	for (int i = 0; i < TEXTURE_MAX; i++)
@@ -95,26 +129,22 @@ HRESULT InitTree(void)
 
 	g_TexNo = g_TexAnim = 0;
 
-	// 木ワークの初期化
-	for(int nCntTree = 0; nCntTree < MAX_TREE; nCntTree++)
+	// エフェクトワークの初期化
+	for(int i = 0; i < EFFECT_MAX; i++)
 	{
-		ZeroMemory(&g_aTree[nCntTree].material, sizeof(g_aTree[nCntTree].material));
-		g_aTree[nCntTree].material.Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		ZeroMemory(&g_aEffect[i].material, sizeof(g_aEffect[i].material));
+		g_aEffect[i].material.Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-		g_aTree[nCntTree].pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		g_aTree[nCntTree].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		g_aTree[nCntTree].fWidth = TREE_WIDTH;
-		g_aTree[nCntTree].fHeight = TREE_HEIGHT;
-		g_aTree[nCntTree].use = FALSE;
+		g_aEffect[i].pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		g_aEffect[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		g_aEffect[i].width = EFFECT_WIDTH;
+		g_aEffect[i].height = EFFECT_HEIGHT;
+		g_aEffect[i].use = FALSE;
+		g_aEffect[i].texNum = 0;
 	}
 
 	g_bAlpaTest = TRUE;
 	//g_nAlpha = 0x0;
-
-	// 木の設定
-	SetTree(XMFLOAT3(0.0f, 0.0f, 0.0f), 10.0f, 20.0f, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-	SetTree(XMFLOAT3(200.0f, 0.0f, 0.0f), 60.0f, 90.0f, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-	SetTree(XMFLOAT3(-200.0f, 0.0f, 0.0f), 60.0f, 90.0f, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 
 	return S_OK;
 }
@@ -122,14 +152,14 @@ HRESULT InitTree(void)
 //=============================================================================
 // 終了処理
 //=============================================================================
-void UninitTree(void)
+void UninitEffect(void)
 {
-	for(int nCntTex = 0; nCntTex < TEXTURE_MAX; nCntTex++)
+	for(int i = 0; i < TEXTURE_MAX; i++)
 	{
-		if(g_Texture[nCntTex] != NULL)
+		if(g_Texture[i] != NULL)
 		{// テクスチャの解放
-			g_Texture[nCntTex]->Release();
-			g_Texture[nCntTex] = NULL;
+			g_Texture[i]->Release();
+			g_Texture[i] = NULL;
 		}
 	}
 
@@ -143,18 +173,19 @@ void UninitTree(void)
 //=============================================================================
 // 更新処理
 //=============================================================================
-void UpdateTree(void)
+void UpdateEffect(void)
 {
-	ENEMY* enemy = GetEnemy();
-	for(int nCntTree = 0; nCntTree < MAX_TREE; nCntTree++)
+	for(int i = 0; i < EFFECT_MAX; i++)
 	{
-		if(g_aTree[nCntTree].use)
+		if(g_aEffect[i].use)
 		{
-			// 影の位置設定
-			//SetPositionShadow(g_aTree[nCntTree].nIdxShadow, XMFLOAT3(g_aTree[nCntTree].pos.x, 0.1f, g_aTree[nCntTree].pos.z));
+			g_aEffect[i].texNum++;
+			if (g_aEffect[i].texNum % EFFECT_FRAME == 0)
+			{
+				g_aEffect[i].use = FALSE;
+			}
 		}
 	}
-
 
 #ifdef _DEBUG
 	// アルファテストON/OFF
@@ -170,7 +201,7 @@ void UpdateTree(void)
 //=============================================================================
 // 描画処理
 //=============================================================================
-void DrawTree(void)
+void DrawEffect(void)
 {
 	// αテスト設定
 	if (g_bAlpaTest == TRUE)
@@ -193,9 +224,9 @@ void DrawTree(void)
 	// プリミティブトポロジ設定
 	GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-	for(int i = 0; i < MAX_TREE; i++)
+	for(int i = 0; i < EFFECT_MAX; i++)
 	{
-		if(g_aTree[i].use)
+		if(g_aEffect[i].use)
 		{
 			// ワールドマトリックスの初期化
 			mtxWorld = XMMatrixIdentity();
@@ -226,11 +257,11 @@ void DrawTree(void)
 
 
 			// スケールを反映
-			mtxScl = XMMatrixScaling(g_aTree[i].scl.x, g_aTree[i].scl.y, g_aTree[i].scl.z);
+			mtxScl = XMMatrixScaling(g_aEffect[i].scl.x, g_aEffect[i].scl.y, g_aEffect[i].scl.z);
 			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
 
 			// 移動を反映
-			mtxTranslate = XMMatrixTranslation(g_aTree[i].pos.x, g_aTree[i].pos.y, g_aTree[i].pos.z);
+			mtxTranslate = XMMatrixTranslation(g_aEffect[i].pos.x, g_aEffect[i].pos.y, g_aEffect[i].pos.z);
 			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
 
 			// ワールドマトリックスの設定
@@ -238,21 +269,10 @@ void DrawTree(void)
 
 
 			// マテリアル設定
-			SetMaterial(g_aTree[i].material);
+			SetMaterial(g_aEffect[i].material);
 
 			// テクスチャ設定
-			int texNo = i % TEXTURE_MAX;
-			if (i == 4)	// ５番の木だけテクスチャアニメさせてみる
-			{
-				// テクスチャアニメはこんな感じで良いよ
-				g_TexAnim++;
-				if ((g_TexAnim % 16) == 0)
-				{
-					g_TexNo = (g_TexNo + 1) % TEXTURE_MAX;
-				}
-				texNo = g_TexNo;
-			}
-			GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[texNo]);
+			GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[g_aEffect[i].texNum]);
 
 			// ポリゴンの描画
 			GetDeviceContext()->Draw(4, 0);
@@ -269,7 +289,7 @@ void DrawTree(void)
 //=============================================================================
 // 頂点情報の作成
 //=============================================================================
-HRESULT MakeVertexTree(void)
+HRESULT MakeVertexEffect(void)
 {
 	// 頂点バッファ生成
 	D3D11_BUFFER_DESC bd;
@@ -287,8 +307,8 @@ HRESULT MakeVertexTree(void)
 
 	VERTEX_3D* vertex = (VERTEX_3D*)msr.pData;
 
-	float fWidth = 60.0f;
-	float fHeight = 90.0f;
+	float fWidth = EFFECT_WIDTH;
+	float fHeight = EFFECT_HEIGHT;
 
 	// 頂点座標の設定
 	vertex[0].Position = XMFLOAT3(-fWidth / 2.0f, fHeight, 0.0f);
@@ -322,28 +342,28 @@ HRESULT MakeVertexTree(void)
 //=============================================================================
 // 木のパラメータをセット
 //=============================================================================
-int SetTree(XMFLOAT3 pos, float fWidth, float fHeight, XMFLOAT4 col)
+int SetEffect(XMFLOAT3 pos, float fWidth, float fHeight, int effectNum)
 {
-	int nIdxTree = -1;
+	int nIdxEffect = -1;
 
-	for(int nCntTree = 0; nCntTree < MAX_TREE; nCntTree++)
+	for(int nCntEffect = 0; nCntEffect < EFFECT_MAX; nCntEffect++)
 	{
-		if(!g_aTree[nCntTree].use)
+		if(!g_aEffect[nCntEffect].use)
 		{
-			g_aTree[nCntTree].pos = pos;
-			g_aTree[nCntTree].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
-			g_aTree[nCntTree].fWidth = fWidth;
-			g_aTree[nCntTree].fHeight = fHeight;
-			g_aTree[nCntTree].use = TRUE;
+			g_aEffect[nCntEffect].pos = pos;
+			g_aEffect[nCntEffect].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
+			g_aEffect[nCntEffect].width = fWidth;
+			g_aEffect[nCntEffect].height = fHeight;
+			g_aEffect[nCntEffect].use = TRUE;
+			g_aEffect[nCntEffect].texNum = effectNum * EFFECT_FRAME;
 
 			// 影の設定
-			g_aTree[nCntTree].nIdxShadow = CreateShadow(g_aTree[nCntTree].pos, 0.5f, 0.5f);
 
-			nIdxTree = nCntTree;
+			nIdxEffect = nCntEffect;
 
 			break;
 		}
 	}
 
-	return nIdxTree;
+	return nIdxEffect;
 }

@@ -171,6 +171,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 #endif
 
 				Update();			// 更新処理
+				if (g_Mode == MODE_MAX) break;
 				Draw();				// 描画処理
 
 #ifdef _DEBUG	// デバッグ版の時だけ表示する

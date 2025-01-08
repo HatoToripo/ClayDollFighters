@@ -13,6 +13,7 @@
 #include "light.h"
 #include "particle.h"
 #include "player.h"
+#include "collision.h"
 
 //*****************************************************************************
 // マクロ定義
@@ -31,20 +32,7 @@
 //*****************************************************************************
 // 構造体定義
 //*****************************************************************************
-typedef struct
-{
-	XMFLOAT3		pos;			// 位置
-	XMFLOAT3		rot;			// 回転
-	XMFLOAT3		scale;			// スケール
-	XMFLOAT3		move;			// 移動量
-	MATERIAL		material;		// マテリアル
-	float			fSizeX;			// 幅
-	float			fSizeY;			// 高さ
-	int				nIdxShadow;		// 影ID
-	int				nLife;			// 寿命
-	BOOL			use;			// 使用しているかどうか
 
-} PARTICLE;
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -106,10 +94,8 @@ HRESULT InitParticle(void)
 		ZeroMemory(&g_aParticle[nCntParticle].material, sizeof(g_aParticle[nCntParticle].material));
 		g_aParticle[nCntParticle].material.Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-		g_aParticle[nCntParticle].fSizeX = PARTICLE_SIZE_X;
-		g_aParticle[nCntParticle].fSizeY = PARTICLE_SIZE_Y;
-		g_aParticle[nCntParticle].nIdxShadow = -1;
-		g_aParticle[nCntParticle].nLife = 0;
+		g_aParticle[nCntParticle].width = PARTICLE_SIZE_X;
+		g_aParticle[nCntParticle].height = PARTICLE_SIZE_Y;
 		g_aParticle[nCntParticle].use = FALSE;
 	}
 
@@ -153,7 +139,7 @@ void UninitParticle(void)
 //=============================================================================
 void UpdateParticle(void)
 {
-	PLAYER* player = GetPlayer();
+	PLAYER *player = GetPlayer();
 	//g_posBase = pPlayer->pos;
 
 	{
@@ -161,100 +147,69 @@ void UpdateParticle(void)
 		{
 			if(g_aParticle[nCntParticle].use)
 			{// 使用中
-				if (g_aParticle[nCntParticle].move.y > 0.0f)
+				if (g_aParticle[nCntParticle].move.y >= 0.0f)
 				{
 					g_aParticle[nCntParticle].pos.x += g_aParticle[nCntParticle].move.x;
 					g_aParticle[nCntParticle].pos.z += g_aParticle[nCntParticle].move.z;
 
 					g_aParticle[nCntParticle].pos.y += g_aParticle[nCntParticle].move.y;
+
+					g_aParticle[nCntParticle].move.x += (0.0f - g_aParticle[nCntParticle].move.x) * 0.015f;
+					g_aParticle[nCntParticle].move.y -= 0.25f;
+					g_aParticle[nCntParticle].move.z += (0.0f - g_aParticle[nCntParticle].move.z) * 0.015f;
 				}
+
+				// 下がり始めたらプレイヤーにホーミングする
 				else
 				{
 					float x = (player->pos.x - g_aParticle[nCntParticle].pos.x);
+					float y = (player->pos.y - g_aParticle[nCntParticle].pos.y);
 					float z = (player->pos.z - g_aParticle[nCntParticle].pos.z);
-					float rad = atan2f(z, x);
-					g_aParticle[nCntParticle].pos.x = cosf(rad) * g_aParticle[nCntParticle].move.x;
-					g_aParticle[nCntParticle].pos.y += g_aParticle[nCntParticle].move.y;
-					g_aParticle[nCntParticle].pos.z = cosf(rad) * g_aParticle[nCntParticle].move.z;
-				}
-				if(g_aParticle[nCntParticle].pos.y <= g_aParticle[nCntParticle].fSizeY / 2)
-				{// 着地した
-					g_aParticle[nCntParticle].pos.y = g_aParticle[nCntParticle].fSizeY / 2;
-					g_aParticle[nCntParticle].move.y = -g_aParticle[nCntParticle].move.y * 0.75f;
-				}
-
-				g_aParticle[nCntParticle].move.x += (0.0f - g_aParticle[nCntParticle].move.x) * 0.015f;
-				g_aParticle[nCntParticle].move.y -= 0.25f;
-				g_aParticle[nCntParticle].move.z += (0.0f - g_aParticle[nCntParticle].move.z) * 0.015f;
-
-#ifdef DISP_SHADOW
-				if(g_aParticle[nCntParticle].nIdxShadow != -1)
-				{// 影使用中
-					float colA;
-
-					// 影の位置設定
-					SetPositionShadow(g_aParticle[nCntParticle].nIdxShadow, XMFLOAT3(g_aParticle[nCntParticle].pos.x, 0.1f, g_aParticle[nCntParticle].pos.z));
-
-					// 影の色の設定
-					colA = g_aParticle[nCntParticle].material.Diffuse.w;
-					SetColorShadow(g_aParticle[nCntParticle].nIdxShadow, XMFLOAT4(0.5f, 0.5f, 0.5f, colA));
-				}
-#endif
-
-				g_aParticle[nCntParticle].nLife--;
-				if(g_aParticle[nCntParticle].nLife <= 0)
-				{
-					g_aParticle[nCntParticle].use = FALSE;
-					ReleaseShadow(g_aParticle[nCntParticle].nIdxShadow);
-					g_aParticle[nCntParticle].nIdxShadow = -1;
-				}
-				else
-				{
-					if(g_aParticle[nCntParticle].nLife <= 80)
+					float radZX = atan2f(z, x);
+					float radYX = atan2f(y, x);
+					g_aParticle[nCntParticle].pos.x += cosf(radZX) * 3.0f;
+					g_aParticle[nCntParticle].pos.y += sinf(radYX) * 3.0f;
+					g_aParticle[nCntParticle].pos.z += sinf(radZX) * 3.0f;
+					// 当たり判定を追加
+					if (CollisionBC(player->pos, g_aParticle[nCntParticle].pos, player->size, PARTICLE_SIZE_X))
 					{
-						g_aParticle[nCntParticle].material.Diffuse.x = 0.8f - (float)(80 - g_aParticle[nCntParticle].nLife) / 80 * 0.8f;
-						g_aParticle[nCntParticle].material.Diffuse.y = 0.7f - (float)(80 - g_aParticle[nCntParticle].nLife) / 80 * 0.7f;
-						g_aParticle[nCntParticle].material.Diffuse.z = 0.2f - (float)(80 - g_aParticle[nCntParticle].nLife) / 80 * 0.2f;
-					}
-
-					if(g_aParticle[nCntParticle].nLife <= 20)
-					{
-						// α値設定
-						g_aParticle[nCntParticle].material.Diffuse.w -= 0.05f;
-						if(g_aParticle[nCntParticle].material.Diffuse.w < 0.0f)
-						{
-							g_aParticle[nCntParticle].material.Diffuse.w = 0.0f;
-						}
+						g_aParticle[nCntParticle].use = FALSE;
 					}
 				}
+
+				//if(g_aParticle[nCntParticle].pos.y <= g_aParticle[nCntParticle].fSizeY / 2)
+				//{// 着地した
+				//	g_aParticle[nCntParticle].pos.y = g_aParticle[nCntParticle].fSizeY / 2;
+				//	g_aParticle[nCntParticle].move.y = -g_aParticle[nCntParticle].move.y * 0.75f;
+				//}
 			}
 		}
 
 		// パーティクル発生
-		{
-			XMFLOAT3 pos;
-			XMFLOAT3 move;
-			float fAngle, fLength;
-			int nLife;
-			float fSize;
+		//{
+		//	XMFLOAT3 pos;
+		//	XMFLOAT3 move;
+		//	float fAngle, fLength;
+		//	int nLife;
+		//	float fSize;
 
-			pos = g_posBase;
+		//	pos = g_posBase;
 
-			fAngle = (float)(rand() % 628 - 314) / 100.0f;
-			fLength = rand() % (int)(g_fWidthBase * 200 ) / 100.0f - g_fWidthBase;
-			move.x = sinf(fAngle) * fLength;
-			move.y = rand() % 300 / 100.0f + g_fHeightBase;
-			move.z = cosf(fAngle) * fLength;
+		//	fAngle = (float)(rand() % 628 - 314) / 100.0f;
+		//	fLength = rand() % (int)(g_fWidthBase * 200 ) / 100.0f - g_fWidthBase;
+		//	move.x = sinf(fAngle) * fLength;
+		//	move.y = rand() % 300 / 100.0f + g_fHeightBase;
+		//	move.z = cosf(fAngle) * fLength;
 
-			nLife = rand() % 100 + 150;  
+		//	nLife = rand() % 100 + 150;  
 
-			fSize = (float)(rand() % 30 + 20);
+		//	fSize = (float)(rand() % 30 + 20);
 
-			pos.y = fSize / 2;
+		//	pos.y = fSize / 2;
 
-			// ビルボードの設定
-			SetParticle(pos, move, XMFLOAT4(0.8f, 0.7f, 0.2f, 0.85f), fSize, fSize, nLife);
-		}
+		//	// ビルボードの設定
+		//	SetParticle(pos, move, XMFLOAT4(0.8f, 0.7f, 0.2f, 0.85f), fSize, fSize, nLife);
+		//}
 	}
 }
 
@@ -409,10 +364,29 @@ void SetColorParticle(int nIdxParticle, XMFLOAT4 col)
 	g_aParticle[nIdxParticle].material.Diffuse = col;
 }
 
+void SetParticle(XMFLOAT3 pos, XMFLOAT4 col)
+{
+	XMFLOAT3 move;
+	float fAngle, fLength;
+	float fSize;
+
+	fAngle = (float)(rand() % 628 - 314) / 100.0f;
+	fLength = rand() % (int)(g_fWidthBase * 200) / 100.0f - g_fWidthBase;
+	move.x = sinf(fAngle) * fLength;
+	move.y = rand() % 300 / 100.0f + g_fHeightBase;
+	move.z = cosf(fAngle) * fLength;
+
+	fSize = (float)(rand() % 30 + 20);
+
+	pos.y = fSize / 2;
+
+	// ビルボードの設定
+	SetParticle(pos, move, col, fSize, fSize);
+}
 //=============================================================================
 // パーティクルの発生処理
 //=============================================================================
-int SetParticle(XMFLOAT3 pos, XMFLOAT3 move, XMFLOAT4 col, float fSizeX, float fSizeY, int nLife)
+int SetParticle(XMFLOAT3 pos, XMFLOAT3 move, XMFLOAT4 col, float width, float height)
 {
 	int nIdxParticle = -1;
 
@@ -425,22 +399,11 @@ int SetParticle(XMFLOAT3 pos, XMFLOAT3 move, XMFLOAT4 col, float fSizeX, float f
 			g_aParticle[nCntParticle].scale = { 1.0f, 1.0f, 1.0f };
 			g_aParticle[nCntParticle].move = move;
 			g_aParticle[nCntParticle].material.Diffuse = col;
-			g_aParticle[nCntParticle].fSizeX = fSizeX;
-			g_aParticle[nCntParticle].fSizeY = fSizeY;
-			g_aParticle[nCntParticle].nLife = nLife;
+			g_aParticle[nCntParticle].width = width;
+			g_aParticle[nCntParticle].height = height;
 			g_aParticle[nCntParticle].use = TRUE;
 
 			nIdxParticle = nCntParticle;
-
-#ifdef DISP_SHADOW
-			// 影の設定
-			g_aParticle[nCntParticle].nIdxShadow = CreateShadow(XMFLOAT3(pos.x, 0.1f, pos.z), 0.8f, 0.8f);		// 影の設定
-			if(g_aParticle[nCntParticle].nIdxShadow != -1)
-			{
-				SetColorShadow(g_aParticle[nCntParticle].nIdxShadow, XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f));
-			}
-#endif
-
 			break;
 		}
 	}

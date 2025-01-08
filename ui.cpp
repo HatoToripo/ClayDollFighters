@@ -18,7 +18,7 @@
 #define TEXTURE_HEIGHT				(32)	// 
 
 #define GAUGE_WIDTH					(32.0f * PLAYER_HP_MAX)	// ゲージサイズ
-#define GAUGE_HEIGHT				(32)	// 
+#define GAUGE_HEIGHT				(16)	// 
 #define TEXTURE_MAX					(4)		// テクスチャの数
 
 #define TEXTURE_PATTERN_DIVIDE_X	(3)		// アニメパターンのテクスチャ内分割数（X)
@@ -74,7 +74,6 @@ HRESULT InitUI(void)
 			&g_Texture[i],
 			NULL);
 	}
-
 
 	// 頂点バッファ生成
 	D3D11_BUFFER_DESC bd;
@@ -213,7 +212,7 @@ void DrawUI(void)
 		float px = g_Pos.x;	// ゲージの表示位置X
 		float py = g_Pos.y + TEXTURE_HEIGHT;			// ゲージの表示位置Y
 		float pw = GAUGE_WIDTH;				// ゲージの表示幅
-		float ph = g_h;				// ゲージの表示高さ
+		float ph = GAUGE_HEIGHT;				// ゲージの表示高さ
 
 		float tw = 1.0f;		// テクスチャの幅
 		float th = 1.0f;		// テクスチャの高さ
@@ -227,33 +226,44 @@ void DrawUI(void)
 		// ポリゴン描画
 		GetDeviceContext()->Draw(4, 0);
 
-		g_TexNo++;
-		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[g_TexNo]);
-		pw = pw * 1.0f / ENEMY_MAX * player->gauge;				// ゲージの表示幅
-
-		// １枚のポリゴンの頂点とテクスチャ座標を設定
-		SetSpriteColor(g_VertexBuffer, px, py, pw, ph, tx, ty, tw, th,
-			XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-
-		// ポリゴン描画
-		GetDeviceContext()->Draw(4, 0);
+		// たまっているゲージの表示
 
 		g_TexNo++;
 		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[g_TexNo]);
-		px += pw * 0.5f;
-		py -= 5.0f;
-		pw = 20.0f;
-		ph += 20.0f;
-		tw = 1.0f / TEXTURE_PATTERN_DIVIDE_X;	// テクスチャの幅
-		th = 1.0f / TEXTURE_PATTERN_DIVIDE_Y;	// テクスチャの高さ
-		tx = (float)(g_AnimNum % TEXTURE_PATTERN_DIVIDE_X) * tw;	// テクスチャの左上X座標
-		ty = (float)(g_AnimNum / TEXTURE_PATTERN_DIVIDE_X) * th;	// テクスチャの左上Y座標
+		pw = pw * 1.0f / ENEMY_MAX;				// ゲージの表示幅
+		for (int i = 0; i < (int)player->gauge; i++)
+		{
+			px += pw * 1.0f / ENEMY_MAX * i;
+			tw = 1.0f / TEXTURE_PATTERN_DIVIDE_X;	// テクスチャの幅
+			th = 1.0f / TEXTURE_PATTERN_DIVIDE_Y;	// テクスチャの高さ
+			tx = (float)(g_AnimNum % TEXTURE_PATTERN_DIVIDE_X) * tw;	// テクスチャの左上X座標
+			ty = (float)(g_AnimNum / TEXTURE_PATTERN_DIVIDE_X) * th;	// テクスチャの左上Y座標
 
-		// １枚のポリゴンの頂点とテクスチャ座標を設定
-		SetSpriteColor(g_VertexBuffer, px, py, pw, ph, tx, ty, tw, th,
-			XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f));
+			// １枚のポリゴンの頂点とテクスチャ座標を設定
+			SetSpriteColor(g_VertexBuffer, px, py, pw, ph, tx, ty, tw, th,
+				XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 
-		// ポリゴン描画
-		GetDeviceContext()->Draw(4, 0);
+			// ポリゴン描画
+			GetDeviceContext()->Draw(4, 0);
+		}
+
+		g_TexNo++;
+		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[g_TexNo]);
+		px = g_Pos.x;
+		for (int i = 0; i < (int)player->gauge; i++)
+		{
+			px += pw * 1.0f / ENEMY_MAX * i;
+			tw = 1.0f / TEXTURE_PATTERN_DIVIDE_X;	// テクスチャの幅
+			th = 1.0f / TEXTURE_PATTERN_DIVIDE_Y;	// テクスチャの高さ
+			tx = (float)(g_AnimNum % TEXTURE_PATTERN_DIVIDE_X) * tw;	// テクスチャの左上X座標
+			ty = (float)(g_AnimNum / TEXTURE_PATTERN_DIVIDE_X) * th;	// テクスチャの左上Y座標
+
+			// １枚のポリゴンの頂点とテクスチャ座標を設定
+			SetSpriteColor(g_VertexBuffer, px, py, pw, ph, tx, ty, tw, th,
+				XMFLOAT4(2.0f, 2.0f, 0.0f, 1.0f));
+
+			// ポリゴン描画
+			GetDeviceContext()->Draw(4, 0);
+		}
 	}
 }
