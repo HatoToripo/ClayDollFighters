@@ -20,8 +20,11 @@
 #include "shadow.h"
 #include "tree.h"
 #include "mark.h"
+#include "arrow.h"
 #include "bullet.h"
 #include "score.h"
+#include "tutorial.h"
+#include "time.h"
 #include "ui.h"
 #include "particle.h"
 #include "effect.h"
@@ -89,16 +92,25 @@ HRESULT InitGame(void)
 		XMFLOAT4(1.0f, 1.0f, 1.0f, 0.25f), 16, 2, 80.0f, 80.0f);
 
 	// 木を生やす
-	InitTree();
+	//InitTree();
 
 	// 検知マークの初期化
 	InitMark();
+
+	// 矢印マークの初期化
+	InitArrow();
 
 	// 弾の初期化
 	InitBullet();
 
 	// スコアの初期化
 	InitScore();
+
+	// チュートリアルの初期化
+	InitTutorial();
+
+	// タイムの初期化
+	InitTime();
 
 	// UIの初期化
 	InitUI();
@@ -108,9 +120,6 @@ HRESULT InitGame(void)
 
 	// エフェクトの初期化
 	InitEffect();
-
-	// BGM再生
-	//PlaySound(SOUND_LABEL_BGM_sample001);
 
 	return S_OK;
 }
@@ -129,17 +138,26 @@ void UninitGame(void)
 	// UIの終了処理
 	UninitUI();
 
+	// タイムの終了処理
+	UninitTime();
+
+	// チュートリアルの終了処理
+	UninitTutorial();
+
 	// スコアの終了処理
 	UninitScore();
 
 	// 弾の終了処理
 	UninitBullet();
 
+	// 矢印マークの終了処理
+	UninitArrow();
+
 	// 検知マークの終了処理
 	UninitMark();
 
 	// 木の終了処理
-	UninitTree();
+	//UninitTree();
 
 	// 壁の終了処理
 	UninitMeshWall();
@@ -164,16 +182,16 @@ void UninitGame(void)
 void UpdateGame(void)
 {
 #ifdef _DEBUG
-	if (GetKeyboardTrigger(DIK_V))
-	{
-		g_ViewPortType_Game = (g_ViewPortType_Game + 1) % TYPE_NONE;
-		SetViewPort(g_ViewPortType_Game);
-	}
+	//if (GetKeyboardTrigger(DIK_V))
+	//{
+	//	g_ViewPortType_Game = (g_ViewPortType_Game + 1) % TYPE_NONE;
+	//	SetViewPort(g_ViewPortType_Game);
+	//}
 
-	if (GetKeyboardTrigger(DIK_P))
-	{
-		g_bPause = g_bPause ? FALSE : TRUE;
-	}
+	//if (GetKeyboardTrigger(DIK_P))
+	//{
+	//	g_bPause = g_bPause ? FALSE : TRUE;
+	//}
 
 
 #endif
@@ -181,44 +199,59 @@ void UpdateGame(void)
 	if(g_bPause == FALSE)
 		return;
 
-	// 地面処理の更新
-	UpdateMeshField();
+	// チュートリアル中なら更新しない
+	if (GetTutorialFlg() == FALSE)
+	{
+		// 地面処理の更新
+		UpdateMeshField();
 
-	// プレイヤーの更新処理
-	UpdatePlayer();
+		// プレイヤーの更新処理
+		UpdatePlayer();
 
-	// エネミーの更新処理
-	UpdateEnemy();
+		// エネミーの更新処理
+		UpdateEnemy();
 
-	// 壁処理の更新
-	UpdateMeshWall();
+		// 壁処理の更新
+		UpdateMeshWall();
 
-	// 木の更新処理
-	UpdateTree();
+		// 木の更新処理
+		//UpdateTree();
 
-	// 検知マークの更新処理
-	UpdateMark();
+		// 検知マークの更新処理
+		UpdateMark();
 
-	// 弾の更新処理
-	UpdateBullet();
+		// 矢印マークの更新処理
+		UpdateArrow();
 
-	// パーティクルの更新処理
-	UpdateParticle();
+		// 弾の更新処理
+		UpdateBullet();
 
-	// エフェクトの更新処理
-	UpdateEffect();
+		// パーティクルの更新処理
+		UpdateParticle();
 
-	// 影の更新処理
-	UpdateShadow();
+		// エフェクトの更新処理
+		UpdateEffect();
 
-	// 当たり判定処理
-	CheckHit();
+		// 影の更新処理
+		UpdateShadow();
 
-	// スコアの更新処理
-	UpdateScore();
+		// 当たり判定処理
+		CheckHit();
 
-	// UIの更新処理
-	UpdateUI();
+		// スコアの更新処理
+		UpdateScore();
+
+		// タイムの更新処理
+		UpdateTime();
+
+		// UIの更新処理
+		UpdateUI();
+	}
+	else
+	{
+		// チュートリアル画面の更新
+		UpdateTutorial();
+	}
 }
 
 //=============================================================================
@@ -246,10 +279,13 @@ void DrawGame0(void)
 	DrawMeshWall();
 
 	// 木の描画処理
-	DrawTree();
+	//DrawTree();
 
 	// 検知マークの描画処理
 	DrawMark();
+
+	// 矢印マークの描画処理
+	DrawArrow();
 
 	// パーティクルの描画処理
 	DrawParticle();
@@ -264,12 +300,22 @@ void DrawGame0(void)
 	// ライティングを無効
 	SetLightEnable(FALSE);
 
-	// スコアの描画処理
-	DrawScore();
+	if (GetTutorialFlg() == TRUE)
+	{
+		// チュートリアルの描画処理
+		DrawTutorial();
+	}
+	else
+	{
+		// スコアの描画処理
+		//DrawScore();
 
-	// UIの描画処理
-	DrawUI();
+		// タイムの描画処理
+		DrawTime();
 
+		// UIの描画処理
+		DrawUI();
+	}
 	// ライティングを有効に
 	SetLightEnable(TRUE);
 
@@ -292,6 +338,18 @@ void DrawGame(void)
 	// プレイヤー視点
 	pos = GetPlayer()->pos;
 	pos.y = 0.0f;			// カメラ酔いを防ぐためにクリアしている
+	ENEMY* boss = GetBoss();
+	if (GetBossFlg() == TRUE && GetBossSponeCnt() < BOSS_SPONE_TIME)
+	{
+		pos = boss->pos;
+		pos.y = 0.0f;
+		AddBossSponeCnt();
+		if (GetBossSponeCnt() >= BOSS_SPONE_TIME / 3 * 2)
+		{
+			SetBoss();
+		}
+	}
+
 	SetCameraAT(pos);
 	SetCamera();
 
@@ -342,7 +400,6 @@ void CheckHit(void)
 {
 	ENEMY *enemy = GetEnemy();		// エネミーのポインターを初期化
 	PLAYER *player = GetPlayer();	// プレイヤーのポインターを初期化
-	BULLET *bullet = GetBullet();	// 弾のポインターを初期化
 
 	// 敵とプレイヤーキャラ
 	for (int i = 0; i < ENEMY_MAX; i++)
@@ -357,58 +414,55 @@ void CheckHit(void)
 			if (CollisionBC(player->pos, enemy[i].pos, player->size, enemy[i].size))
 			{
 				// プレイヤーにダメージ
-				player->DecHP(enemy[i].atk);
+				player->DecHP(enemy[i].atkVal);
 			}
 		}
 	}
 
-	// プレイヤーの弾と敵
-	for (int i = 0; i < MAX_BULLET; i++)
+	ENEMY* boss = GetBoss();
+	if (GetBossFlg() == FALSE)
 	{
-		//弾の有効フラグをチェックする
-		if (bullet[i].use == FALSE)
-			continue;
-
-		// 敵と当たってるか調べる
-		for (int j = 0; j < ENEMY_MAX; j++)
+		// エネミーが全部死亡したら状態遷移
+		int enemy_count = 0;
+		for (int i = 0; i < ENEMY_MAX; i++)
 		{
-			//敵の有効フラグをチェックする
-			if (enemy[j].use == FALSE)
-				continue;
+			if (enemy[i].use == FALSE) continue;
+			enemy_count++;
+		}
+		// エネミーが０匹？
+		if (enemy_count == 0 || GetTime() == 0)
+		{
+			// エネミーを削除
+			ReleaseEnemy();
 
-			//BCの当たり判定
-			if (CollisionBC(bullet[i].pos, enemy[j].pos, bullet[i].fWidth, enemy[j].size))
+			for (int i = 0; i < BOSS_MAX; i++)
 			{
-				// 当たったから未使用に戻す
-				bullet[i].use = FALSE;
-				ReleaseShadow(bullet[i].shadowIdx);
-
-				// 敵キャラクターは倒される
-				enemy[j].use = FALSE;
-				ReleaseShadow(enemy[j].shadowIdx);
-
-				// スコアを足す
-				AddScore(10);
+				// ボスを配置
+				AddBossSponeCnt();
+				SetEffect(XMFLOAT3(boss->pos.x, boss->pos.y - ENEMY_OFFSET_Y * EFFECT_HEIGHT / 15.0f, boss->pos.z), EFFECT_WIDTH, EFFECT_HEIGHT, EFFECT_SPONE);
+				PlaySound(SOUND_LABEL_SE_spone);
 			}
 		}
-
 	}
 
-
-	// エネミーが全部死亡したら状態遷移
-	int enemy_count = 0;
-	for (int i = 0; i < ENEMY_MAX; i++)
+	else
 	{
-		if (enemy[i].use == FALSE) continue;
-		enemy_count++;
-	}
+		if (GetBossSponeCnt() >= BOSS_SPONE_TIME)
+		{
+			int boss_count = 0;
+			for (int i = 0; i < BOSS_MAX; i++)
+			{
+				if (boss[i].use == FALSE) continue;
+				boss_count++;
+			}
 
-	// エネミーが０匹？
-	if (enemy_count == 0)
-	{
-		SetFade(FADE_OUT, MODE_RESULT);
+			// ボスが0匹？
+			if (boss_count == 0)
+			{
+				SetFade(FADE_OUT, MODE_RESULT);
+			}
+		}
 	}
-
 }
 
 

@@ -15,7 +15,7 @@
 // マクロ定義
 //*****************************************************************************
 #define TEXTURE_WIDTH				(16)	// HPサイズ
-#define TEXTURE_HEIGHT				(32)	// 
+#define TEXTURE_HEIGHT				(16)	// 
 
 #define GAUGE_WIDTH					(32.0f * PLAYER_HP_MAX)	// ゲージサイズ
 #define GAUGE_HEIGHT				(16)	// 
@@ -181,19 +181,20 @@ void DrawUI(void)
 	// 桁数分処理する
 	for (int i = 0; i < g_Hp; i++)
 	{
-		// 今回表示する桁の数字
-		float x = (float)((i % 2));
+		// 今回表示する幅
+		float x = (float)((i % 4 / 2));
+		float y = (float)((i % 2));
 
 		// HPの位置やテクスチャー座標を反映
-		float px = g_Pos.x + g_w*i;	// HPの表示位置X
-		float py = g_Pos.y;			// HPの表示位置Y
+		float px = g_Pos.x + g_w * (int)(i / 2);	// HPの表示位置X
+		float py = g_Pos.y + g_h * y;			// HPの表示位置Y
 		float pw = g_w;				// HPの表示幅
 		float ph = g_h;				// HPの表示高さ
 
 		float tw = 0.5f;		// テクスチャの幅
-		float th = 1.0f;		// テクスチャの高さ
+		float th = 0.5f;		// テクスチャの高さ
 		float tx = x * tw;			// テクスチャの左上X座標
-		float ty = 0.0f;			// テクスチャの左上Y座標
+		float ty = y * th;			// テクスチャの左上Y座標
 
 		// １枚のポリゴンの頂点とテクスチャ座標を設定
 		SetSpriteColor(g_VertexBuffer, px, py, pw, ph, tx, ty, tw, th,
@@ -202,15 +203,17 @@ void DrawUI(void)
 		// ポリゴン描画
 		GetDeviceContext()->Draw(4, 0);
 	}
+
 	g_TexNo++;
 
 	// ゲージの描画
+	if (GetBossFlg() == FALSE)
 	{
 		// テクスチャ設定
 		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[g_TexNo]);
 
 		float px = g_Pos.x;	// ゲージの表示位置X
-		float py = g_Pos.y + TEXTURE_HEIGHT;			// ゲージの表示位置Y
+		float py = g_Pos.y + TEXTURE_HEIGHT * 2;			// ゲージの表示位置Y
 		float pw = GAUGE_WIDTH;				// ゲージの表示幅
 		float ph = GAUGE_HEIGHT;				// ゲージの表示高さ
 

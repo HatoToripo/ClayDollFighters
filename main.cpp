@@ -14,6 +14,7 @@
 #include "player.h"
 #include "enemy.h"
 #include "game.h"
+#include "setting.h"
 #include "fade.h"
 #include "title.h"
 #include "result.h"
@@ -23,7 +24,7 @@
 // マクロ定義
 //*****************************************************************************
 #define CLASS_NAME		"AppClass"				// ウインドウのクラス名
-#define WINDOW_NAME		"影表示"	// ウインドウのキャプション名
+#define WINDOW_NAME		"ClayDoll Fighters"	// ウインドウのキャプション名
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -301,15 +302,33 @@ void Update(void)
 	switch (g_Mode)
 	{
 	case MODE_TITLE:		// タイトル画面の更新
-		UpdateTitle();
+		if (GetSettingFlag() == TRUE)
+		{
+			UpdateSetting();
+		}
+		else
+		{
+			UpdateTitle();
+		}
 		break;
 
 	case MODE_GAME:			// ゲーム画面の更新
-		UpdateGame();
+		if (GetSettingFlag() == FALSE)
+		{
+			UpdateGame();
+		}
+
+		else
+		{
+			UpdateSetting();
+		}
 		break;
 
 	case MODE_RESULT:		// リザルト画面の更新
 		UpdateResult();
+		break;
+	case MODE_GAMEOVER:
+		SetFade(FADE_OUT, MODE_GAME);
 		break;
 	}
 
@@ -342,8 +361,14 @@ void Draw(void)
 		// ライティングを無効
 		SetLightEnable(FALSE);
 
-		DrawTitle();
-
+		if (GetSettingFlag() == TRUE)
+		{
+			DrawSetting();
+		}
+		else
+		{
+			DrawTitle();
+		}
 		// ライティングを有効に
 		SetLightEnable(TRUE);
 
@@ -352,7 +377,28 @@ void Draw(void)
 		break;
 
 	case MODE_GAME:			// ゲーム画面の描画
-		DrawGame();
+		if (GetSettingFlag() == FALSE)
+		{
+			DrawGame();
+		}
+		else
+		{
+			// 2Dの物を描画する処理
+			// Z比較なし
+			SetDepthEnable(FALSE);
+
+			// ライティングを無効
+			SetLightEnable(FALSE);
+
+			// セッティングの描画
+			DrawSetting();
+
+			// ライティングを有効に
+			SetLightEnable(TRUE);
+
+			// Z比較あり
+			SetDepthEnable(TRUE);
+		}
 		break;
 
 	case MODE_RESULT:		// リザルト画面の描画
@@ -373,9 +419,10 @@ void Draw(void)
 		// Z比較あり
 		SetDepthEnable(TRUE);
 		break;
+
+	case MODE_GAMEOVER:
+		break;
 	}
-
-
 
 	{	// フェード処理
 		SetViewPort(TYPE_FULL_SCREEN);
@@ -396,7 +443,6 @@ void Draw(void)
 		// Z比較あり
 		SetDepthEnable(TRUE);
 	}
-
 
 #ifdef _DEBUG
 	// デバッグ表示
@@ -435,6 +481,9 @@ void SetMode(int mode)
 {
 	// モードを変える前に全部メモリを解放しちゃう
 
+	// 設定画面の終了処理
+	UninitSetting();
+
 	// タイトル画面の終了処理
 	UninitTitle();
 
@@ -452,6 +501,8 @@ void SetMode(int mode)
 	case MODE_TITLE:
 		// タイトル画面の初期化
 		InitTitle();
+		InitSetting();
+		PlaySound(SOUND_LABEL_BGM_op);
 		break;
 
 	case MODE_GAME:
@@ -459,12 +510,15 @@ void SetMode(int mode)
 		UninitCamera();
 		InitCamera();
 		// ゲーム画面の初期化
+		InitSetting();
 		InitGame();
+		PlaySound(SOUND_LABEL_BGM_field);
 		break;
 
 	case MODE_RESULT:
 		// リザルト画面の初期化
 		InitResult();
+		PlaySound(SOUND_LABEL_BGM_clear);
 		break;
 
 		// ゲーム終了時の処理

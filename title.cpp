@@ -10,6 +10,7 @@
 #include "fade.h"
 #include "sound.h"
 #include "setting.h"
+#include "tutorial.h"
 #include "sprite.h"
 
 //*****************************************************************************
@@ -32,7 +33,6 @@
 enum 
 {
 	START_GAME,
-	SELECT_STAGE,
 	SETTING,
 	QUIT_GAME,
 
@@ -65,7 +65,7 @@ static ID3D11ShaderResourceView	*g_Texture[TEXTURE_MAX] = { NULL };	// ƒeƒNƒXƒ`ƒ
 
 static char *g_TexturName[TEXTURE_MAX] = {
 
-	"data/TEXTURE/Layer_0.png",
+	"data/TEXTURE/setting_back.png",
 	"data/TEXTURE/title.png",
 	"data/TEXTURE/title_startgame.png",
 	"data/TEXTURE/title_selectstage.png",
@@ -212,29 +212,17 @@ void UpdateTitle(void)
 		{// Enter‰Ÿ‚µ‚½‚çAƒXƒe[ƒW‚ğØ‚è‘Ö‚¦‚é
 			SetFade(FADE_OUT, MODE_GAME);
 			PlaySound(SOUND_LABEL_SE_enter);
+			SetTutorialFlg();
 		}
 		// ƒQ[ƒ€ƒpƒbƒh‚Å“ü—Íˆ—
 		else if (IsButtonTriggered(0, BUTTON_B))
 		{
 			SetFade(FADE_OUT, MODE_GAME);
 			PlaySound(SOUND_LABEL_SE_enter);
+			SetTutorialFlg();
 		}
 		break;
 
-	// ƒZ[ƒuƒf[ƒ^‚ğƒ[ƒh‚·‚é
-	//case SELECT_STAGE:
-	//	if (GetKeyboardTrigger(DIK_RETURN))
-	//	{// Enter‰Ÿ‚µ‚½‚çAƒXƒe[ƒW‚ğØ‚è‘Ö‚¦‚é
-	//		SetSelectFlag();
-	//		PlaySound(SOUND_LABEL_SE_enter);
-	//	}
-	//	// ƒQ[ƒ€ƒpƒbƒh‚Å“ü—Íˆ—
-	//	else if (IsButtonTriggered(0, BUTTON_B))
-	//	{
-	//		SetSelectFlag();
-	//		PlaySound(SOUND_LABEL_SE_enter);
-	//	}
-	//	break;
 	
 	// İ’è‰æ–Ê‚ğ•\¦
 	case SETTING:
@@ -265,14 +253,6 @@ void UpdateTitle(void)
 		}
 
 	}
-
-	// ƒZ[ƒuƒf[ƒ^‚ğƒ[ƒh‚·‚éH
-	//if (GetKeyboardTrigger(DIK_L))
-	//{
-	//	SetLoadGame(TRUE);
-	//	SetFade(FADE_OUT, MODE_GAME);
-	//}
-
 
 #ifdef _DEBUG	// ƒfƒoƒbƒOî•ñ‚ğ•\¦‚·‚é
 	//PrintDebugProc("Player:ª ¨ « ©@Space\n");
@@ -347,21 +327,6 @@ void DrawTitle(void)
 	py = TEXTURE_Y_LOGO;		// SelectStage‚Ì•\¦ˆÊ’uY
 	pw = TEXTURE_WIDTH_LOGO;		// ƒQ[ƒW‚Ì•\¦•
 	ph = TEXTURE_HEIGHT_LOGO;		// ƒQ[ƒW‚Ì•\¦‚‚³
-
-	// ‚P–‡‚Ìƒ|ƒŠƒSƒ“‚Ì’¸“_‚ÆƒeƒNƒXƒ`ƒƒÀ•W‚ğİ’è
-	SetSpriteLTColor(g_VertexBuffer,
-		px, py, pw, ph,
-		tx, ty, tw, th,
-		XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-
-	// ƒ|ƒŠƒSƒ“•`‰æ
-	GetDeviceContext()->Draw(4, 0);
-
-	// ƒeƒNƒXƒ`ƒƒİ’è
-	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[TEXTURE_SELECT]);
-
-	//Ÿ‚ÌƒƒS‚ğ•`‰æ
-	py += TEXTURE_INTERVAL_LOGO;		// SelectStage‚Ì•\¦ˆÊ’uY
 
 	// ‚P–‡‚Ìƒ|ƒŠƒSƒ“‚Ì’¸“_‚ÆƒeƒNƒXƒ`ƒƒÀ•W‚ğİ’è
 	SetSpriteLTColor(g_VertexBuffer,

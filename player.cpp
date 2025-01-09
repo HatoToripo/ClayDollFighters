@@ -15,6 +15,9 @@
 #include "shadow.h"
 #include "bullet.h"
 #include "effect.h"
+#include "fade.h"
+#include "sound.h"
+#include "setting.h"
 #include "collision.h"
 #include "particle.h"
 #include "debugproc.h"
@@ -45,7 +48,6 @@
 #define	BARRIER_WHITE		(BARRIER_FRAME / 5)				// 無敵時間の点滅間隔
 
 #define PLAYER_SHADOW_SIZE	(0.4f)							// 影の大きさ
-#define PLAYER_OFFSET_Y		(7.0f)							// プレイヤーの足元をあわせる
 #define RADIAN				(XM_PI / 180)					// ラジアン変換用
 
 #define PLAYER_HEAD_Y		(2.7f)								// 頭のx座標
@@ -446,7 +448,7 @@ static INTERPOLATION_DATA* g_JumpTblAdr[] =
 	jump_tbl_scabbard,
 };
 
-// ジャンプモーションデータ
+// アタックモーションデータ
 static INTERPOLATION_DATA attack_tbl_head[] = {	// pos, rot, scl, frame
 	{ XMFLOAT3(0.0f, PLAYER_HEAD_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
 	{ XMFLOAT3(0.0f, PLAYER_HEAD_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_ATTACK },
@@ -560,12 +562,12 @@ HRESULT InitPlayer(void)
 	g_Player.load = TRUE;
 	LoadModel(MODEL_PLAYER, &g_Player.model);
 
-	g_Player.pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	g_Player.pos = XMFLOAT3(0.0f, PLAYER_OFFSET_Y, 0.0f);
 	g_Player.rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	g_Player.scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	g_Player.spd = 0.0f;			// 移動スピードクリア
-	g_Player.hp = 10;				// 体力の初期化
+	g_Player.hp = 20;				// 体力の初期化
 	g_Player.gauge = 0;			// 体力の初期化
 	g_Player.colCnt = 0;			// 体力の初期化
 
@@ -584,7 +586,7 @@ HRESULT InitPlayer(void)
 	// ここでプレイヤー用の影を作成している
 	XMFLOAT3 pos = g_Player.pos;
 	pos.y -= (PLAYER_OFFSET_Y - 0.1f);
-	g_Player.shadowIdx = CreateShadow(pos, PLAYER_SHADOW_SIZE, PLAYER_SHADOW_SIZE);
+	//g_Player.shadowIdx = CreateShadow(pos, PLAYER_SHADOW_SIZE, PLAYER_SHADOW_SIZE);
 	//          ↑
 	//        このメンバー変数が生成した影のIndex番号
 
@@ -831,6 +833,12 @@ HRESULT InitPlayer(void)
 	// モデルのディフューズを保存しておく。色変え対応の為。
 	GetModelDiffuse(&g_Parts[PLAYER_PARTS_SCABBARD].model, &g_Parts[PLAYER_PARTS_SCABBARD].diffuse[0]);
 
+	// 最初からパーツをくっつけておく
+	for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+	{
+		g_Parts[i].Animation(PLAYER_ANIM_STOP);
+	}
+
 	// クォータニオンの初期化
 	XMStoreFloat4(&g_Player.Quaternion, XMQuaternionIdentity());
 
@@ -874,7 +882,7 @@ void UninitPlayer(void)
 //=============================================================================
 void UpdatePlayer(void)
 {
-	if (g_Player.use == TRUE)
+	if (g_Player.use == TRUE && GetFade() == FADE_NONE)
 	{
 		// 無敵時間は色替えをする
 		if (g_Player.colCnt > 0)
@@ -901,14 +909,14 @@ void UpdatePlayer(void)
 			{
 				for (int i = 0; i < g_Player.model.SubsetNum; i++)
 				{
-					SetModelDiffuse(&g_Player.model, i, g_Player.diffuse[0]);
+					SetModelDiffuse(&g_Player.model, i, g_Player.diffuse[i]);
 				}
 
 				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
 				{
 					for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
 					{
-						SetModelDiffuse(&g_Parts[i].model, j, g_Parts[i].diffuse[0]);
+						SetModelDiffuse(&g_Parts[i].model, j, g_Parts[i].diffuse[j]);
 					}
 				}
 			}
@@ -920,7 +928,7 @@ void UpdatePlayer(void)
 				g_Player.colCnt = 0;
 				for (int i = 0; i < g_Player.model.SubsetNum; i++)
 				{
-					SetModelDiffuse(&g_Player.model, i, g_Player.diffuse[0]);
+					SetModelDiffuse(&g_Player.model, i, g_Player.diffuse[i]);
 				}
 
 				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
@@ -955,6 +963,7 @@ void UpdatePlayer(void)
 			roty = -XM_PI / 2;
 			animNum = PLAYER_ANIM_MOVE;
 		}
+
 		if (GetKeyboardPress(DIK_UP))
 		{
 			g_Player.spd = VALUE_MOVE;
@@ -970,8 +979,39 @@ void UpdatePlayer(void)
 			animNum = PLAYER_ANIM_MOVE;
 		}
 
+		// ゲームパット操作
+		if (IsButtonPressed(0, BUTTON_LEFT))
+		{
+			g_Player.spd = VALUE_MOVE;
+			//g_Player.pos.x -= g_Player.spd;
+			roty = XM_PI / 2;
+			animNum = PLAYER_ANIM_MOVE;
+		}
+		if (IsButtonPressed(0, BUTTON_RIGHT))
+		{
+			g_Player.spd = VALUE_MOVE;
+			//g_Player.pos.x += g_Player.spd;
+			roty = -XM_PI / 2;
+			animNum = PLAYER_ANIM_MOVE;
+		}
+
+		if (IsButtonPressed(0, BUTTON_UP))
+		{
+			g_Player.spd = VALUE_MOVE;
+			//g_Player.pos.z += g_Player.spd;
+			roty = XM_PI;
+			animNum = PLAYER_ANIM_MOVE;
+		}
+		if (IsButtonPressed(0, BUTTON_DOWN))
+		{
+			g_Player.spd = VALUE_MOVE;
+			//g_Player.pos.z -= g_Player.spd;
+			roty = 0.0f;
+			animNum = PLAYER_ANIM_MOVE;
+		}
+
 		// ダッシュ処理
-		if (GetKeyboardPress(DIK_LSHIFT))
+		if (GetKeyboardPress(DIK_LSHIFT) || IsButtonPressed(0, BUTTON_X))
 		{
 			g_Player.spd *= VALUE_DASH;
 
@@ -982,6 +1022,17 @@ void UpdatePlayer(void)
 			}
 		}
 
+		// 設定画面を開く
+		if (GetKeyboardTrigger(DIK_P))
+		{
+			SetSettingFlag();
+		}
+
+		else if (IsButtonTriggered(0, BUTTON_SELECT))
+		{
+			SetSettingFlag();
+		}
+
 #ifdef _DEBUG
 		if (GetKeyboardPress(DIK_R))
 		{
@@ -989,7 +1040,6 @@ void UpdatePlayer(void)
 			g_Player.spd = 0.0f;
 			roty = 0.0f;
 		}
-#endif
 
 		if (GetKeyboardPress(DIK_J))
 		{
@@ -997,6 +1047,7 @@ void UpdatePlayer(void)
 			g_Player.spd = 0.0f;
 			roty = 0.0f;
 		}
+#endif
 
 		{	// 押した方向にプレイヤーを移動させる
 			// 押した方向にプレイヤーを向かせている所
@@ -1020,6 +1071,25 @@ void UpdatePlayer(void)
 			Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
 		}
 
+		//壁の座標を超えないようにする
+		if (g_Player.pos.x > MAP_RIGHT - g_Player.size * 0.5f)
+		{
+			g_Player.pos.x = MAP_RIGHT - g_Player.size * 0.5f;
+		}
+		if (g_Player.pos.x < MAP_LEFT + g_Player.size * 0.5f)
+		{
+			g_Player.pos.x = MAP_LEFT + g_Player.size * 0.5f;
+		}
+		if (g_Player.pos.z > MAP_TOP - g_Player.size * 0.5f)
+		{
+			g_Player.pos.z = MAP_TOP - g_Player.size * 0.5f;
+		}
+		if (g_Player.pos.z < MAP_DOWN + g_Player.size * 0.5f)
+		{
+			g_Player.pos.z = MAP_DOWN + g_Player.size * 0.5f;
+		}
+
+		
 		// 弾発射処理
 		//if (GetKeyboardTrigger(DIK_SPACE))
 		//{
@@ -1027,38 +1097,39 @@ void UpdatePlayer(void)
 		//}
 
 		// 影もプレイヤーの位置に合わせる
-		XMFLOAT3 pos = g_Player.pos;
-		pos.y -= (PLAYER_OFFSET_Y - 0.1f);
-		SetPositionShadow(g_Player.shadowIdx, pos);
+		//XMFLOAT3 pos = g_Player.pos;
+		//pos.y -= (PLAYER_OFFSET_Y - 0.1f);
+		//SetPositionShadow(g_Player.shadowIdx, pos);
 
 		// ジャンプ処理中
-		if (g_Player.jump == TRUE)
-		{
-			float angle = (XM_PI / PLAYER_JUMP_CNT_MAX) * g_Player.jumpCnt;
-			float y = PLAYER_JUMP_Y * cosf(XM_PI / 2 + angle);
-			//g_Player.pos.y -= y;
+		//if (g_Player.jump == TRUE)
+		//{
+		//	float angle = (XM_PI / PLAYER_JUMP_CNT_MAX) * g_Player.jumpCnt;
+		//	float y = PLAYER_JUMP_Y * cosf(XM_PI / 2 + angle);
+		//	//g_Player.pos.y -= y;
 
-			g_Player.jumpCnt++;
-			if (g_Player.jumpCnt > PLAYER_JUMP_CNT_MAX)
-			{
-				g_Player.jump = FALSE;
-				g_Player.jumpCnt = 0;
-				g_AnimTransFrameCnt[PLAYER_ANIM_JUMP] = 0.0f;
-				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-				{
-					g_Parts[i].time[PLAYER_ANIM_JUMP] = 0.0f;
-				}
-			}
+		//	g_Player.jumpCnt++;
+		//	if (g_Player.jumpCnt > PLAYER_JUMP_CNT_MAX)
+		//	{
+		//		g_Player.jump = FALSE;
+		//		g_Player.jumpCnt = 0;
+		//		g_AnimTransFrameCnt[PLAYER_ANIM_JUMP] = 0.0f;
+		//		for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+		//		{
+		//			g_Parts[i].time[PLAYER_ANIM_JUMP] = 0.0f;
+		//		}
+		//	}
 
-		}
-		// ジャンプボタン押した？
-		else if ((g_Player.jump == FALSE) && (GetKeyboardTrigger(DIK_X)))
-		{
-			g_Player.jump = TRUE;
-			g_Player.jumpCnt = 0;
-		}
+		//}
+		//// ジャンプボタン押した？
+		//else if ((g_Player.jump == FALSE) && (GetKeyboardTrigger(DIK_X)))
+		//{
+		//	g_Player.jump = TRUE;
+		//	g_Player.jumpCnt = 0;
+		//}
 
 		ENEMY* enemy = GetEnemy();
+		ENEMY* boss = GetBoss();
 		// アタック処理中
 		if (g_Player.attack == TRUE)
 		{
@@ -1078,8 +1149,8 @@ void UpdatePlayer(void)
 				g_Parts[PLAYER_PARTS_SWORD_B].use = FALSE;
 				XMFLOAT3 pos = g_Player.pos;
 
-				pos.x -= sinf(g_Player.rot.y) * ATTACK_DEPTH * 0.5;
-				pos.z -= cosf(g_Player.rot.y) * ATTACK_DEPTH * 0.5;
+				pos.x -= (float)sinf(g_Player.rot.y) * ATTACK_DEPTH * 0.5f;
+				pos.z -= (float)cosf(g_Player.rot.y) * ATTACK_DEPTH * 0.5f;
 
 				for (int i = 0; i < ENEMY_MAX; i++)
 				{
@@ -1089,6 +1160,17 @@ void UpdatePlayer(void)
 						if (CollisionBC(pos, enemy[i].pos, ATTACK_DEPTH, enemy[i].size))
 						{
 							g_Player.gauge += enemy[i].DecHP(g_Player.atkVal);
+						}
+					}
+				}
+
+				for (int i = 0; i < BOSS_MAX; i++)
+				{
+					if (boss[i].use == TRUE && boss[i].colCnt == 0)
+					{
+						if (CollisionBC(pos, boss[i].pos, ATTACK_DEPTH, boss[i].size))
+						{
+							boss[i].DecHP(g_Player.atkVal + g_Player.gauge);
 						}
 					}
 				}
@@ -1114,6 +1196,15 @@ void UpdatePlayer(void)
 			g_Player.attack = TRUE;
 			g_Player.atkCnt = 0;
 			animNum = PLAYER_ANIM_ATTACK;
+			PlaySound(SOUND_LABEL_SE_slash);
+		}
+
+		else if ((g_Player.attack == FALSE) && (IsButtonTriggered(0, BUTTON_A)))
+		{
+			g_Player.attack = TRUE;
+			g_Player.atkCnt = 0;
+			animNum = PLAYER_ANIM_ATTACK;
+			PlaySound(SOUND_LABEL_SE_slash);
 		}
 
 		// 階層アニメーション
@@ -1192,26 +1283,28 @@ void UpdatePlayer(void)
 #endif
 	}
 
-	else
+	if (g_Player.use == FALSE)
 	{
 		g_RotDead += RADIAN * 5.0f;
 		for (int i = 0; i < g_Player.model.SubsetNum; i++)
 		{
-			SetModelDiffuse(&g_Player.model, i, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * cos(g_RotDead)));
+			SetModelDiffuse(&g_Player.model, i, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * (float)cos(g_RotDead)));
 		}
 
 		for (int i = 0; i < PLAYER_PARTS_MAX; i++)
 		{
 			for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
 			{
-				SetModelDiffuse(&g_Parts[i].model, j, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * cos(g_RotDead)));
+				SetModelDiffuse(&g_Parts[i].model, j, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * (float)cos(g_RotDead)));
 			}
 		}
 
-		GetModelDiffuse(&g_Player.model, &g_Player.diffuse[0]);
-		if (g_Player.diffuse[0].w <= 0.0f)
+		XMFLOAT4 playerDiffuse[MODEL_MAX_MATERIAL];
+		GetModelDiffuse(&g_Player.model, &playerDiffuse[0]);
+
+		if (playerDiffuse[0].w <= 0.0f)
 		{
-			SetFade(FADE_OUT, MODE_RESULT);
+			SetFade(FADE_OUT, MODE_GAMEOVER);
 		}
 	}
 }
@@ -1221,88 +1314,182 @@ void UpdatePlayer(void)
 //=============================================================================
 void DrawPlayer(void)
 {
-	XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld, quatMatrix;
-
-	// カリング無効
-	SetCullingMode(CULL_MODE_NONE);
-
-	// ワールドマトリックスの初期化
-	mtxWorld = XMMatrixIdentity();
-
-	// スケールを反映
-	mtxScl = XMMatrixScaling(g_Player.scl.x, g_Player.scl.y, g_Player.scl.z);
-	mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
-
-	// 回転を反映
-	mtxRot = XMMatrixRotationRollPitchYaw(g_Player.rot.x, g_Player.rot.y + XM_PI, g_Player.rot.z);
-	mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
-
-	// クォータニオンを反映
-	quatMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&g_Player.Quaternion));
-	mtxWorld = XMMatrixMultiply(mtxWorld, quatMatrix);
-
-	// 移動を反映
-	mtxTranslate = XMMatrixTranslation(g_Player.pos.x, g_Player.pos.y, g_Player.pos.z);
-	mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
-
-	// ワールドマトリックスの設定
-	SetWorldMatrix(&mtxWorld);
-
-	XMStoreFloat4x4(&g_Player.mtxWorld, mtxWorld);
-
-
-	// 縁取りの設定
-	//SetRimLight(1);
-
-	// モデル描画
-	DrawModel(&g_Player.model);
-
-	SetRimLight(0);
-
-	// 階層アニメーション
-	for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+	if (g_Player.use == TRUE)
 	{
-		// ワールドマトリックスの初期化
-		mtxWorld = XMMatrixIdentity();
-
-		// スケールを反映
-		mtxScl = XMMatrixScaling(g_Parts[i].scl.x, g_Parts[i].scl.y, g_Parts[i].scl.z);
-		mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
-
-		// 回転を反映
-		mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i].rot.x, g_Parts[i].rot.y, g_Parts[i].rot.z);
-		mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
-
-		// 移動を反映
-		mtxTranslate = XMMatrixTranslation(g_Parts[i].pos.x, g_Parts[i].pos.y, g_Parts[i].pos.z);
-		mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
-
-		if (g_Parts[i].parent != NULL)	// 子供だったら親と結合する
+		// マテリアル退避用
+		XMFLOAT4 playerDiffuse[MODEL_MAX_MATERIAL];
+		XMFLOAT4 partsDiffuse[PLAYER_PARTS_MAX][MODEL_MAX_MATERIAL];
+		// 平坦化行列の影描画
 		{
-			mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i].parent->mtxWorld));
-			// ↑
-			// g_Player.mtxWorldを指している
+			GetModelDiffuse(&g_Player.model, &playerDiffuse[0]);
+			for (int i = 0; i < g_Player.model.SubsetNum; i++)
+			{
+				SetModelDiffuse(&g_Player.model, i, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+			}
+
+			XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld;
+
+			// ワールドマトリックスの初期化
+			mtxWorld = XMMatrixIdentity();
+
+			// スケールを反映
+			mtxScl = XMMatrixScaling(g_Player.scl.x * 1.2f, 0.1f, g_Player.scl.z * 1.2f);
+			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+			// 回転を反映
+			mtxRot = XMMatrixRotationRollPitchYaw(g_Player.rot.x, g_Player.rot.y + XM_PI, g_Player.rot.z);
+			mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+			// 移動を反映
+			mtxTranslate = XMMatrixTranslation(g_Player.pos.x, g_Player.pos.y - PLAYER_OFFSET_Y, g_Player.pos.z);
+			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+			// ワールドマトリックスの設定
+			SetWorldMatrix(&mtxWorld);
+
+			XMStoreFloat4x4(&g_Player.mtxWorld, mtxWorld);
+
+
+			// モデル描画
+			DrawModel(&g_Player.model);
+
+			// 階層アニメーション
+			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+			{
+				GetModelDiffuse(&g_Parts[i].model, &partsDiffuse[i][0]);
+				for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
+				{
+					SetModelDiffuse(&g_Parts[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+				}
+				// ワールドマトリックスの初期化
+				mtxWorld = XMMatrixIdentity();
+
+				// スケールを反映
+				mtxScl = XMMatrixScaling(g_Parts[i].scl.x * 1.2f, 0.1f, g_Parts[i].scl.z * 1.2f);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+				// 回転を反映
+				mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i].rot.x, g_Parts[i].rot.y, g_Parts[i].rot.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+				// 移動を反映
+				mtxTranslate = XMMatrixTranslation(g_Parts[i].pos.x, g_Parts[i].pos.y, g_Parts[i].pos.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+				if (g_Parts[i].parent != NULL)	// 子供だったら親と結合する
+				{
+					mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i].parent->mtxWorld));
+					// ↑
+					// g_Player.mtxWorldを指している
+				}
+
+				XMStoreFloat4x4(&g_Parts[i].mtxWorld, mtxWorld);
+
+				// 使われているなら処理する
+				if (g_Parts[i].use == FALSE) continue;
+
+				// ワールドマトリックスの設定
+				SetWorldMatrix(&mtxWorld);
+
+				// モデル描画
+				DrawModel(&g_Parts[i].model);
+
+			}
 		}
 
-		XMStoreFloat4x4(&g_Parts[i].mtxWorld, mtxWorld);
-
-		// 使われているなら処理する
-		if (g_Parts[i].use == FALSE) continue;
-
-		// ワールドマトリックスの設定
-		SetWorldMatrix(&mtxWorld);
-
 		// モデル描画
-		DrawModel(&g_Parts[i].model);
+		{
+			for (int i = 0; i < g_Player.model.SubsetNum; i++)
+			{
+				SetModelDiffuse(&g_Player.model, i, playerDiffuse[i]);
+			}
 
+			// ボス戦に入ったら光らせる
+			if (GetBossFlg() == TRUE)
+			{
+				SetRimLight(2);
+			}
+			XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld, quatMatrix;
+
+			// カリング無効
+			SetCullingMode(CULL_MODE_NONE);
+
+			// ワールドマトリックスの初期化
+			mtxWorld = XMMatrixIdentity();
+
+			// スケールを反映
+			mtxScl = XMMatrixScaling(g_Player.scl.x, g_Player.scl.y, g_Player.scl.z);
+			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+			// 回転を反映
+			mtxRot = XMMatrixRotationRollPitchYaw(g_Player.rot.x, g_Player.rot.y + XM_PI, g_Player.rot.z);
+			mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+			// クォータニオンを反映
+			quatMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&g_Player.Quaternion));
+			mtxWorld = XMMatrixMultiply(mtxWorld, quatMatrix);
+
+			// 移動を反映
+			mtxTranslate = XMMatrixTranslation(g_Player.pos.x, g_Player.pos.y, g_Player.pos.z);
+			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+			// ワールドマトリックスの設定
+			SetWorldMatrix(&mtxWorld);
+
+			XMStoreFloat4x4(&g_Player.mtxWorld, mtxWorld);
+
+			// モデル描画
+			DrawModel(&g_Player.model);
+
+
+			// 階層アニメーション
+			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+			{
+				for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
+				{
+					SetModelDiffuse(&g_Parts[i].model, j, partsDiffuse[i][j]);
+				}
+
+				// ワールドマトリックスの初期化
+				mtxWorld = XMMatrixIdentity();
+
+				// スケールを反映
+				mtxScl = XMMatrixScaling(g_Parts[i].scl.x, g_Parts[i].scl.y, g_Parts[i].scl.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+				// 回転を反映
+				mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i].rot.x, g_Parts[i].rot.y, g_Parts[i].rot.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+				// 移動を反映
+				mtxTranslate = XMMatrixTranslation(g_Parts[i].pos.x, g_Parts[i].pos.y, g_Parts[i].pos.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+				if (g_Parts[i].parent != NULL)	// 子供だったら親と結合する
+				{
+					mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i].parent->mtxWorld));
+					// ↑
+					// g_Player.mtxWorldを指している
+				}
+
+				XMStoreFloat4x4(&g_Parts[i].mtxWorld, mtxWorld);
+
+				// 使われているなら処理する
+				if (g_Parts[i].use == FALSE) continue;
+
+				// ワールドマトリックスの設定
+				SetWorldMatrix(&mtxWorld);
+
+				// モデル描画
+				DrawModel(&g_Parts[i].model);
+			}
+		}
 	}
 
-	//SetRimLight(0);
-
+	SetRimLight(0);
 	// カリング設定を戻す
 	SetCullingMode(CULL_MODE_BACK);
 }
-
 
 //=============================================================================
 // プレイヤー情報を取得
@@ -1492,176 +1679,12 @@ void PLAYER::DecHP(int atk)
 {
 	hp -= atk;
 	colCnt++;
-	SetEffect(XMFLOAT3(pos.x, pos.y - PLAYER_OFFSET_Y * EFFECT_HEIGHT / 15.0f, pos.z), EFFECT_WIDTH, EFFECT_HEIGHT, EFECT_HIT);
+	SetEffect(XMFLOAT3(pos.x, pos.y - PLAYER_OFFSET_Y * EFFECT_HEIGHT / 15.0f, pos.z), EFFECT_WIDTH, EFFECT_HEIGHT, EFFECT_HIT);
+	PlaySound(SOUND_LABEL_SE_hit);
 
 	if (hp <= 0)
 	{
 		use = FALSE;
-		ReleaseShadow(shadowIdx);
+		//ReleaseShadow(shadowIdx);
 	}
 }
-
-////=============================================================================
-//// アニメーション関数
-////=============================================================================
-//void PlayerAnimation(int animNum, int i)
-//{
-//	// 線形補間の処理
-//	INTERPOLATION_DATA* tbl;
-//
-//	switch (animNum)
-//	{
-//	case PLAYER_ANIM_STOP:
-//		tbl = g_StopTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
-//		break;
-//	case PLAYER_ANIM_MOVE:
-//		tbl = g_MoveTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
-//		break;
-//	case PLAYER_ANIM_DASH:
-//		tbl = g_DashTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
-//		break;
-//	case PLAYER_ANIM_JUMP:
-//		tbl = g_JumpTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
-//		break;
-//	default:
-//		tbl = g_AttackTblAdr[g_Parts[i].tblNo[animNum]];	// 待機テーブルのアドレスを取得
-//		break;
-//	}
-//
-//	int nowNo = (int)g_Parts[i].time[animNum];			// 整数分であるテーブル番号を取り出している
-//	int maxNo = g_Parts[i].tblMax[animNum];				// 登録テーブル数を数えている
-//	int nextNo = (nowNo + 1) % maxNo;			// 移動先テーブルの番号を求めている
-//
-//	XMVECTOR nowPos = XMLoadFloat3(&tbl[nowNo].pos);	// XMVECTORへ変換
-//	XMVECTOR nowRot = XMLoadFloat3(&tbl[nowNo].rot);	// XMVECTORへ変換
-//	XMVECTOR nowScl = XMLoadFloat3(&tbl[nowNo].scl);	// XMVECTORへ変換
-//
-//	XMVECTOR Pos = XMLoadFloat3(&tbl[nextNo].pos) - nowPos;	// XYZ移動量を計算している
-//	XMVECTOR Rot = XMLoadFloat3(&tbl[nextNo].rot) - nowRot;	// XYZ回転量を計算している
-//	XMVECTOR Scl = XMLoadFloat3(&tbl[nextNo].scl) - nowScl;	// XYZ拡大率を計算している
-//
-//	float nowTime = g_Parts[i].time[animNum] - nowNo;	// 時間部分である少数を取り出している
-//
-//	Pos = nowPos + Pos * nowTime;								// 現在の移動量を計算している
-//	Rot = nowRot + Rot * nowTime;								// 現在の回転量を計算している
-//	Scl = nowScl + Scl * nowTime;								// 現在の拡大率を計算している
-//
-//	// 計算して求めた移動量を現在の移動テーブルXYZに足している＝表示座標を求めている
-//	XMStoreFloat3(&g_Parts[i].pos, Pos);
-//
-//	// 計算して求めた回転量を現在の移動テーブルに足している
-//	XMStoreFloat3(&g_Parts[i].rot, Rot);
-//
-//	// 計算して求めた拡大率を現在の移動テーブルに足している
-//	XMStoreFloat3(&g_Parts[i].scl, Scl);
-//
-//	// frameを使て時間経過処理をする
-//	g_Parts[i].time[animNum] += 1.0f / tbl[nowNo].frame;	// 時間を進めている
-//	if ((int)g_Parts[i].time[animNum] >= maxNo)			// 登録テーブル最後まで移動したか？
-//	{
-//		g_Parts[i].time[animNum] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
-//	}
-//}
-//
-////=============================================================================
-//// モーションブレンド関数
-////=============================================================================
-//void PlayerAnimationBlend(int animNum1, int animNum2, int i)
-//{
-//	// アニメーション番号が同じだった場合
-//	if (animNum1 == animNum2)
-//	{
-//		PlayerAnimation(animNum1, i);
-//		return;
-//	}
-//
-//	// アニメーションが変わったタイミングでカウントをリセットする
-//	if (g_AnimTransFrameCnt[animNum1] < g_AnimTransFrameCnt[animNum2])
-//	{
-//		g_AnimTransFrameCnt[animNum2] = 0.0f;
-//	}
-//
-//	int animNum[2] = { animNum1, animNum2 };
-//
-//	// 使われているなら処理する
-//	if (/*(g_Parts[i].use == TRUE) && */(g_Parts[i].tblMax[animNum1] > 0))
-//	{
-//		INTERPOLATION_DATA* tbl[2];
-//		XMVECTOR Pos[2];
-//		XMVECTOR Rot[2];
-//		XMVECTOR Scl[2];
-//
-//		for (int j = 0; j < 2; j++)
-//		{	// 線形補間の処理
-//			// 1つ目のアニメーションの計算
-//			switch (animNum[j])
-//			{
-//			case PLAYER_ANIM_STOP:
-//				tbl[j] = g_StopTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
-//				break;
-//			case PLAYER_ANIM_MOVE:
-//				tbl[j] = g_MoveTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
-//				break;
-//			case PLAYER_ANIM_DASH:
-//				tbl[j] = g_DashTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
-//				break;
-//			case PLAYER_ANIM_JUMP:
-//				tbl[j] = g_JumpTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
-//				break;
-//			default:
-//				tbl[j] = g_AttackTblAdr[g_Parts[i].tblNo[animNum[j]]];	// 待機テーブルのアドレスを取得
-//				break;
-//			}
-//
-//			int nowNo = (int)g_Parts[i].time[animNum[j]];			// 整数分であるテーブル番号を取り出している
-//			int maxNo = g_Parts[i].tblMax[animNum[j]];				// 登録テーブル数を数えている
-//			int nextNo = (nowNo + 1) % maxNo;			// 移動先テーブルの番号を求めている
-//
-//			XMVECTOR nowPos = XMLoadFloat3(&tbl[j][nowNo].pos);	// XMVECTORへ変換
-//			XMVECTOR nowRot = XMLoadFloat3(&tbl[j][nowNo].rot);	// XMVECTORへ変換
-//			XMVECTOR nowScl = XMLoadFloat3(&tbl[j][nowNo].scl);	// XMVECTORへ変換
-//
-//			Pos[j] = XMLoadFloat3(&tbl[j][nextNo].pos) - nowPos;	// XYZ移動量を計算している
-//			Rot[j] = XMLoadFloat3(&tbl[j][nextNo].rot) - nowRot;	// XYZ回転量を計算している
-//			Scl[j] = XMLoadFloat3(&tbl[j][nextNo].scl) - nowScl;	// XYZ拡大率を計算している
-//
-//			float nowTime = g_Parts[i].time[animNum[j]] - nowNo;	// 時間部分である少数を取り出している
-//
-//			Pos[j] = nowPos + Pos[j] * nowTime;
-//			Rot[j] = nowRot + Rot[j] * nowTime;
-//			Scl[j] = nowScl + Scl[j] * nowTime;
-//
-//			// frameを使て時間経過処理をする
-//			g_Parts[i].time[animNum[j]] += 1.0f / tbl[j][nowNo].frame;	// 時間を進めている
-//			if ((int)g_Parts[i].time[animNum[j]] >= maxNo)			// 登録テーブル最後まで移動したか？
-//			{
-//				g_Parts[i].time[animNum[j]] -= maxNo;				// ０番目にリセットしつつも小数部分を引き継いでいる
-//			}
-//		}
-//		// 重みづけ
-//		float weight = (1.0f / g_AnimTransFrame[animNum1]) * g_AnimTransFrameCnt[animNum1];
-//		// モーションブレンドの座標計算
-//		XMVECTOR blendPos = Pos[0] * weight + Pos[1] * (1.0f - weight);
-//		XMVECTOR blendRot = Rot[0] * weight + Rot[1] * (1.0f - weight);
-//		XMVECTOR blendScl = Scl[0] * weight + Scl[1] * (1.0f - weight);
-//
-//		// 計算して求めた移動量を現在の移動テーブルXYZに足している＝表示座標を求めている
-//		XMStoreFloat3(&g_Parts[i].pos, blendPos);
-//
-//		// 計算して求めた回転量を現在の移動テーブルに足している
-//		XMStoreFloat3(&g_Parts[i].rot, blendRot);
-//
-//		// 計算して求めた拡大率を現在の移動テーブルに足している
-//		XMStoreFloat3(&g_Parts[i].scl, blendScl);
-//
-//		g_AnimTransFrameCnt[animNum1] += 1.0f;
-//		if (g_AnimTransFrameCnt[animNum1] >= g_AnimTransFrame[animNum1])
-//		{
-//			g_AnimTransFrameCnt[animNum1] = g_AnimTransFrame[animNum1];
-//			g_Parts[i].animNum = animNum1;
-//
-//			// アニメーションの移行が完了したタイミングでリセット
-//			g_Parts[i].time[animNum2] = 0.0f;
-//		}
-//	}
-//}

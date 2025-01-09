@@ -46,7 +46,7 @@ static MESH_WALL g_aMeshWall[MAX_MESH_WALL];		// メッシュ壁ワーク
 static int g_nNumMeshField = 0;						// メッシュ壁の数
 
 static char* g_TextureName[] = {
-	"data/TEXTURE/wall000.jpg",
+	"data/TEXTURE/wall.jpg",
 };
 
 //=============================================================================

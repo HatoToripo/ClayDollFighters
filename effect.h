@@ -14,10 +14,11 @@
 
 enum
 {
-	EFECT_HIT,
-	EFECT_DEAD,
+	EFFECT_HIT,
+	EFFECT_DEAD,
+	EFFECT_SPONE,
 
-	EFECT_NUM
+	EFFECT_NUM
 };
 //*****************************************************************************
 // ç\ë¢ëÃíËã`

@@ -17,7 +17,7 @@
 //*****************************************************************************
 // プロトタイプ宣言
 //*****************************************************************************
-
+#define	DIRECTIONAL_LIGHT_Y		(30.0f)				// 平行光源の高さ
 
 //*****************************************************************************
 // グローバル変数
@@ -26,8 +26,7 @@ static LIGHT	g_Light[LIGHT_MAX];
 
 static FOG		g_Fog;
 
-static BOOL		g_FogEnable = TRUE;
-
+static BOOL		g_FogEnable = FALSE;
 
 //=============================================================================
 // 初期化処理
@@ -39,7 +38,7 @@ void InitLight(void)
 	for (int i = 0; i < LIGHT_MAX; i++)
 	{
 		g_Light[i].Position  = XMFLOAT3( 0.0f, 0.0f, 0.0f );
-		g_Light[i].Direction = XMFLOAT3( 0.0f, -1.0f, 0.0f );
+		g_Light[i].Direction = XMFLOAT3( 0.0f, -1.0f, 0.0f);
 		g_Light[i].Diffuse   = XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f );
 		g_Light[i].Ambient   = XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f );
 		g_Light[i].Attenuation = 100.0f;	// 減衰距離
@@ -49,13 +48,12 @@ void InitLight(void)
 	}
 
 	// 並行光源の設定（世界を照らす光）
+	g_Light[0].Position = XMFLOAT3( 0.0f, DIRECTIONAL_LIGHT_Y, 0.0f );		// 光の向き
 	g_Light[0].Direction = XMFLOAT3( 0.0f, -1.0f, 0.0f );		// 光の向き
 	g_Light[0].Diffuse   = XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f );	// 光の色
 	g_Light[0].Type = LIGHT_TYPE_DIRECTIONAL;					// 並行光源
 	g_Light[0].Enable = TRUE;									// このライトをON
 	SetLight(0, &g_Light[0]);									// これで設定している
-
-
 
 	// フォグの初期化（霧の効果）
 	g_Fog.FogStart = 100.0f;									// 視点からこの距離離れるとフォグがかかり始める
@@ -72,7 +70,6 @@ void InitLight(void)
 //=============================================================================
 void UpdateLight(void)
 {
-
 
 
 }

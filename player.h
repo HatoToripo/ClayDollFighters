@@ -15,6 +15,7 @@
 
 #define	PLAYER_SIZE		(3.0f)				// 当たり判定の大きさ
 #define	PLAYER_HP_MAX	(10)				// プレイヤーの体力の最大値
+#define PLAYER_OFFSET_Y		(7.0f)							// プレイヤーの足元をあわせる
 
 enum
 {

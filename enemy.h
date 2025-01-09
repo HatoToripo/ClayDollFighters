@@ -10,9 +10,12 @@
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-#define ENEMY_MAX		(3)					// エネミーの数
+#define ENEMY_MAX		(10)					// エネミーの数
+#define BOSS_MAX		(1)						// ボスの数
 
 #define	ENEMY_SIZE		(4.0f)				// 当たり判定の大きさ
+#define	BOSS_SPONE_TIME	(180)				// ボス出現後カメラに映るフレーム
+#define ENEMY_OFFSET_Y		(7.0f)						// エネミーの足元をあわせる
 
 enum
 {
@@ -25,7 +28,7 @@ enum
 	ENEMY_PARTS_LEG_R,
 	ENEMY_PARTS_FOOT_L,
 	ENEMY_PARTS_FOOT_R,
-	//ENEMY_PARTS_SWORD_R,
+	ENEMY_PARTS_SWORD_R,
 	//ENEMY_PARTS_SWORD_B,
 	//ENEMY_PARTS_SCABBARD,
 
@@ -36,9 +39,7 @@ enum
 {
 	ENEMY_ANIM_STOP,
 	ENEMY_ANIM_MOVE,
-	ENEMY_ANIM_DASH,
-	//ENEMY_ANIM_JUMP,
-	//ENEMY_ANIM_ATTACK,
+	ENEMY_ANIM_ATTACK,
 
 	ENEMY_ANIM_MAX
 };
@@ -59,8 +60,13 @@ public:
 	XMFLOAT4			diffuse[MODEL_MAX_MATERIAL];	// モデルの色
 
 	int					hp;					// エネミーの体力
-	int					atk;				// エネミーの攻撃力
+	BOOL				attack;				// アタックフラグ
+	int					atkVal;				// 攻撃力
+	int					atkCnt;				// アタック中のカウント
 	float				spd;				// 移動スピード
+	int					moveCnt;			// 移動する間隔
+	BOOL				moveFlg;			// 移動フラグ
+
 	int					colCnt;				// 無敵時間
 	float				size;				// 当たり判定の大きさ
 	int					shadowIdx;			// 影のインデックス番号
@@ -77,7 +83,6 @@ public:
 
 	// アニメーション関数
 	void Animation(int animNum);
-	void BodyAnimation(int i);
 	void Animation(int animNum1, int animNum2);
 	int DecHP(int atk);
 };
@@ -91,3 +96,12 @@ void UpdateEnemy(void);
 void DrawEnemy(void);
 
 ENEMY *GetEnemy(void);
+ENEMY *GetEnemyParts(void);
+ENEMY *GetBoss(void);
+void ColCheck(XMFLOAT3 pos, ENEMY& enemy, ENEMY parts[ENEMY_PARTS_MAX]);
+BOOL GetBossFlg(void);
+void AttackCheck(ENEMY& enemy, ENEMY parts[ENEMY_PARTS_MAX]);
+void SetBoss(void);
+int GetBossSponeCnt(void);
+void AddBossSponeCnt(void);
+void ReleaseEnemy(void);

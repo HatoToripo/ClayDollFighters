@@ -40,19 +40,20 @@ DWORD g_aSizeAudio[SOUND_LABEL_MAX] = {};					// オーディオデータサイズ
 SOUNDPARAM g_aParam[SOUND_LABEL_MAX] =
 {
 	{ (char*)"data/BGM/op.wav", -1 },	// BGM0
-	{ (char*)"data/BGM/field0.wav", -1 },	// BGM1
-	{ (char*)"data/BGM/field1.wav", -1 },	// BGM1
-	{ (char*)"data/BGM/field2.wav", -1 },	// BGM1
-	{ (char*)"data/BGM/field3.wav", -1 },	// BGM1
-	{ (char*)"data/BGM/clear.wav", -1 },	// BGM2
+	{ (char*)"data/BGM/clear.wav", -1 },	// BGM1
+	{ (char*)"data/BGM/field.wav", -1 },	// BGM1
+	{ (char*)"data/BGM/gameover.wav", -1 },	// BGM1
+
 	{ (char*)"data/SE/fire.wav", 0 },		// 弾発射音
 	{ (char*)"data/SE/hassha.wav", 0 },		// 弾発射音
 	{ (char*)"data/SE/jump.wav", 0 },			// 弾発射音
-	{ (char*)"data/SE/teki_taosu.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/death.wav", 0 },		// 弾発射音
-	{ (char*)"data/SE/goal.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/enemy_death.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/hit.wav", 0 },		// 弾発射音
+	{ (char*)"data/SE/spone.wav", 0 },		// 弾発射音
 	{ (char*)"data/SE/select.wav", 0 },		// 選択音
 	{ (char*)"data/SE/enter.wav", 0 },		// 決定音
+	{ (char*)"data/SE/shot.wav", 0 },		// 選択音
+	{ (char*)"data/SE/slash.wav", 0 },		// 決定音
 };
 
 static int						g_Volume;					// ボリューム

@@ -13,8 +13,11 @@
 // マクロ定義
 //*****************************************************************************
 #define	POS_X_CAM			(0.0f)			// カメラの初期位置(X座標)
-#define	POS_Y_CAM			(32.0f)			// カメラの初期位置(Y座標)
-#define	POS_Z_CAM			(-60.0f)		// カメラの初期位置(Z座標)
+#define	POS_Y_CAM			(40.0f)			// カメラの初期位置(Y座標)
+#define	POS_Z_CAM			(-80.0f)		// カメラの初期位置(Z座標)
+
+#define POS_X_MAX			(270.0f)		// カメラの最大値(X座標)
+#define POS_X_MAX			(270.0f)		// カメラの最大値(Z座標)
 
 //#define	POS_X_CAM			(0.0f)			// カメラの初期位置(X座標)
 //#define	POS_Y_CAM			(50.0f)			// カメラの初期位置(Y座標)
@@ -285,6 +288,10 @@ int GetViewPortType(void)
 void SetCameraAT(XMFLOAT3 pos)
 {
 	// カメラの注視点を引数の座標にしてみる
+	if (pos.x > POS_X_MAX) pos.x = POS_X_MAX;
+	if (pos.x < -POS_X_MAX) pos.x = -POS_X_MAX;
+	if (pos.z> POS_X_MAX) pos.z = POS_X_MAX;
+	if (pos.z < -POS_X_MAX) pos.z = -POS_X_MAX;
 	g_Camera.at = pos;
 
 	// カメラの視点をカメラのY軸回転に対応させている

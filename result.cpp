@@ -4,24 +4,29 @@
 // Author : 
 //
 //=============================================================================
-#include "main.h"
-#include "renderer.h"
 #include "result.h"
 #include "input.h"
-#include "fade.h"
-#include "sound.h"
-#include "sprite.h"
 #include "score.h"
+#include "fade.h"
 
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
 #define TEXTURE_WIDTH				(SCREEN_WIDTH)	// 背景サイズ
 #define TEXTURE_HEIGHT				(SCREEN_HEIGHT)	// 
-#define TEXTURE_MAX					(3)				// テクスチャの数
+#define TEXTURE_MAX					(2)				// テクスチャの数
 
-#define TEXTURE_WIDTH_LOGO			(480)			// ロゴサイズ
-#define TEXTURE_HEIGHT_LOGO			(80)			// 
+#define TEXTURE_LOGO_WIDTH			(100.0f)			// ロゴの縦幅
+#define TEXTURE_LOGO_HEIGHT			(50.0f)			// ロゴの横幅
+
+#define TEXTURE_PATTERN_DIVIDE_X	(1)		// アニメパターンのテクスチャ内分割数（X)
+#define TEXTURE_PATTERN_DIVIDE_Y	(10)	// アニメパターンのテクスチャ内分割数（Y)
+#define ANIM_PATTERN_NUM			(TEXTURE_PATTERN_DIVIDE_X*TEXTURE_PATTERN_DIVIDE_Y)	// アニメーションパターン数
+#define ANIM_WAIT					(4)		// アニメーションの切り替わるWait値
+
+#define TEXTURE_GOTITLE_X			((SCREEN_WIDTH - TEXTURE_LOGO_WIDTH) * 0.5)		// gotitleのX座標
+#define TEXTURE_GOTITLE_Y			(375.0f)							// gotitleのY座標
+#define GOTEITLE_WAIT				(300.0f)					// 描画する待ち時間
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -31,13 +36,12 @@
 //*****************************************************************************
 // グローバル変数
 //*****************************************************************************
-static ID3D11Buffer				*g_VertexBuffer = NULL;		// 頂点情報
-static ID3D11ShaderResourceView	*g_Texture[TEXTURE_MAX] = { NULL };	// テクスチャ情報
+static ID3D11Buffer* g_VertexBuffer = NULL;		// 頂点情報
+static ID3D11ShaderResourceView* g_Texture[TEXTURE_MAX] = { NULL };	// テクスチャ情報
 
-static char *g_TexturName[TEXTURE_MAX] = {
-	"data/TEXTURE/bg001.jpg",
-	"data/TEXTURE/result_logo.png",
-	"data/TEXTURE/number16x32.png",
+static char* g_TexturName[TEXTURE_MAX] = {
+	"data/TEXTURE/congratulations.png",
+	"data/TEXTURE/setting_gotitle.png",
 };
 
 
@@ -45,6 +49,8 @@ static BOOL						g_Use;						// TRUE:使っている  FALSE:未使用
 static float					g_w, g_h;					// 幅と高さ
 static XMFLOAT3					g_Pos;						// ポリゴンの座標
 static int						g_TexNo;					// テクスチャ番号
+static float					g_CountAnim;				// アニメーションカウンタ
+static int						g_PatternAnim;				// アニメーションパターン
 
 static BOOL						g_Load = FALSE;
 
@@ -53,7 +59,7 @@ static BOOL						g_Load = FALSE;
 //=============================================================================
 HRESULT InitResult(void)
 {
-	ID3D11Device *pDevice = GetDevice();
+	ID3D11Device* pDevice = GetDevice();
 
 	//テクスチャ生成
 	for (int i = 0; i < TEXTURE_MAX; i++)
@@ -79,14 +85,16 @@ HRESULT InitResult(void)
 
 
 	// 変数の初期化
-	g_Use   = TRUE;
-	g_w     = TEXTURE_WIDTH;
-	g_h     = TEXTURE_HEIGHT;
-	g_Pos   = { g_w / 2, 50.0f, 0.0f };
+	g_Use = TRUE;
+	g_w = TEXTURE_WIDTH;
+	g_h = TEXTURE_HEIGHT;
+	g_Pos = { g_w / 2, 50.0f, 0.0f };
+	g_CountAnim = 0.0f;
+	g_PatternAnim = 0;
 	g_TexNo = 0;
 
 	// BGM再生
-	//PlaySound(SOUND_LABEL_BGM_sample002);
+
 
 	g_Load = TRUE;
 	return S_OK;
@@ -122,6 +130,13 @@ void UninitResult(void)
 //=============================================================================
 void UpdateResult(void)
 {
+	g_CountAnim += 1.0f;
+	if (g_CountAnim > ANIM_WAIT)
+	{
+		g_CountAnim = 0.0f;
+		// パターンの切り替え
+		g_PatternAnim = (g_PatternAnim + 1) % ANIM_PATTERN_NUM;
+	}
 
 	if (GetKeyboardTrigger(DIK_RETURN))
 	{// Enter押したら、ステージを切り替える
@@ -139,7 +154,7 @@ void UpdateResult(void)
 
 
 #ifdef _DEBUG	// デバッグ情報を表示する
-	
+
 #endif
 
 }
@@ -167,68 +182,48 @@ void DrawResult(void)
 	SetMaterial(material);
 
 	// リザルトの背景を描画
-	{
-		// テクスチャ設定
-		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[0]);
+	float rx = 0.0f;
+	float ry = 0.0f;
+	float rw = SCREEN_WIDTH;
+	float rh = SCREEN_HEIGHT;
 
-		// １枚のポリゴンの頂点とテクスチャ座標を設定
-		SetSpriteLeftTop(g_VertexBuffer, 0.0f, 0.0f, g_w, g_h, 0.0f, 0.0f, 1.0f, 1.0f);
+	// アニメーション用
+	float tw = 1.0f / TEXTURE_PATTERN_DIVIDE_X;	// テクスチャの幅
+	float th = 1.0f / TEXTURE_PATTERN_DIVIDE_Y;	// テクスチャの高さ
+	float tx = (float)(g_PatternAnim % TEXTURE_PATTERN_DIVIDE_X) * tw;	// テクスチャの左上X座標
+	float ty = (float)(g_PatternAnim / TEXTURE_PATTERN_DIVIDE_X) * th;	// テクスチャの左上Y座標
 
-		// ポリゴン描画
-		GetDeviceContext()->Draw(4, 0);
-	}
+	// テクスチャ設定
+	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[0]);
+
+	// １枚のポリゴンの頂点とテクスチャ座標を設定
+	SetSpriteLeftTop(g_VertexBuffer, rx, ry, rw, rh, tx, ty, tw, th);
+
+	// ポリゴン描画
+	GetDeviceContext()->Draw(4, 0);
 
 	// リザルトのロゴを描画
-	{
-		// テクスチャ設定
-		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[1]);
+	// テクスチャ設定
+	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[1]);
 
-		// １枚のポリゴンの頂点とテクスチャ座標を設定
-		SetSprite(g_VertexBuffer, g_Pos.x, g_Pos.y, TEXTURE_WIDTH_LOGO, TEXTURE_HEIGHT_LOGO, 0.0f, 0.0f, 1.0f, 1.0f);
+	rx = TEXTURE_GOTITLE_X;
+	ry = TEXTURE_GOTITLE_Y;
+	rw = TEXTURE_LOGO_WIDTH;
+	rh = TEXTURE_LOGO_HEIGHT;
 
-		// ポリゴン描画
-		GetDeviceContext()->Draw(4, 0);
-	}
+	tw = 1.0f;
+	th = 1.0f;
+	tx = 0.0f;
+	ty = 0.0f;
 
+	// １枚のポリゴンの頂点とテクスチャ座標を設定
+	SetSpriteLTColor(g_VertexBuffer,
+		rx, ry, rw, rh,
+		tx, ty, tw, th,
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 
-	// スコア表示
-	{
-		// テクスチャ設定
-		GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[2]);
-
-		// 桁数分処理する
-		int number = GetScore();
-		for (int i = 0; i < SCORE_DIGIT; i++)
-		{
-			// 今回表示する桁の数字
-			float x = (float)(number % 10);
-
-			// スコアの位置やテクスチャー座標を反映
-			float pw = 16*4;			// スコアの表示幅
-			float ph = 32*4;			// スコアの表示高さ
-			float px = 600.0f - i*pw;	// スコアの表示位置X
-			float py = 300.0f;			// スコアの表示位置Y
-
-			float tw = 1.0f / 10;		// テクスチャの幅
-			float th = 1.0f / 1;		// テクスチャの高さ
-			float tx = x * tw;			// テクスチャの左上X座標
-			float ty = 0.0f;			// テクスチャの左上Y座標
-
-			// １枚のポリゴンの頂点とテクスチャ座標を設定
-			SetSpriteColor(g_VertexBuffer, px, py, pw, ph, tx, ty, tw, th,
-				XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-
-			// ポリゴン描画
-			GetDeviceContext()->Draw(4, 0);
-
-			// 次の桁へ
-			number /= 10;
-		}
-
-	}
-
-
-
+	// ポリゴン描画
+	GetDeviceContext()->Draw(4, 0);
 }
 
 

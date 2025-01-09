@@ -17,7 +17,7 @@
 // マクロ定義
 //*****************************************************************************
 #define EFFECT_FRAME		(30)
-#define TEXTURE_MAX			(EFFECT_FRAME * EFECT_NUM)				// テクスチャの数
+#define TEXTURE_MAX			(EFFECT_FRAME * EFFECT_NUM)				// テクスチャの数
 
 #define	EFFECT_MAX			(20)				// エフェクト最大数
 
@@ -106,6 +106,37 @@ static char *g_TextureName[] =
 	"data/Effect_Explosion/Effect_Explosion_1_027.png",
 	"data/Effect_Explosion/Effect_Explosion_1_028.png",
 	"data/Effect_Explosion/Effect_Explosion_1_029.png",
+
+	"data/Effect_Anima/Effect_Anima_1_000.png",
+	"data/Effect_Anima/Effect_Anima_1_001.png",
+	"data/Effect_Anima/Effect_Anima_1_002.png",
+	"data/Effect_Anima/Effect_Anima_1_003.png",
+	"data/Effect_Anima/Effect_Anima_1_004.png",
+	"data/Effect_Anima/Effect_Anima_1_005.png",
+	"data/Effect_Anima/Effect_Anima_1_006.png",
+	"data/Effect_Anima/Effect_Anima_1_007.png",
+	"data/Effect_Anima/Effect_Anima_1_008.png",
+	"data/Effect_Anima/Effect_Anima_1_009.png",
+	"data/Effect_Anima/Effect_Anima_1_010.png",
+	"data/Effect_Anima/Effect_Anima_1_011.png",
+	"data/Effect_Anima/Effect_Anima_1_012.png",
+	"data/Effect_Anima/Effect_Anima_1_013.png",
+	"data/Effect_Anima/Effect_Anima_1_014.png",
+	"data/Effect_Anima/Effect_Anima_1_015.png",
+	"data/Effect_Anima/Effect_Anima_1_016.png",
+	"data/Effect_Anima/Effect_Anima_1_017.png",
+	"data/Effect_Anima/Effect_Anima_1_018.png",
+	"data/Effect_Anima/Effect_Anima_1_019.png",
+	"data/Effect_Anima/Effect_Anima_1_020.png",
+	"data/Effect_Anima/Effect_Anima_1_021.png",
+	"data/Effect_Anima/Effect_Anima_1_022.png",
+	"data/Effect_Anima/Effect_Anima_1_023.png",
+	"data/Effect_Anima/Effect_Anima_1_024.png",
+	"data/Effect_Anima/Effect_Anima_1_025.png",
+	"data/Effect_Anima/Effect_Anima_1_026.png",
+	"data/Effect_Anima/Effect_Anima_1_027.png",
+	"data/Effect_Anima/Effect_Anima_1_028.png",
+	"data/Effect_Anima/Effect_Anima_1_029.png",
 };
 
 //=============================================================================
@@ -179,10 +210,27 @@ void UpdateEffect(void)
 	{
 		if(g_aEffect[i].use)
 		{
-			g_aEffect[i].texNum++;
-			if (g_aEffect[i].texNum % EFFECT_FRAME == 0)
+			if (g_aEffect[i].texNum < EFFECT_SPONE * EFFECT_FRAME)
 			{
-				g_aEffect[i].use = FALSE;
+				g_aEffect[i].texNum++;
+				if (g_aEffect[i].texNum % EFFECT_FRAME == 0)
+				{
+					g_aEffect[i].use = FALSE;
+				}
+			}
+
+			else
+			{
+				g_aEffect[i].texNum++;
+				if (g_aEffect[i].texNum % EFFECT_FRAME == 0)
+				{
+					g_aEffect[i].texNum -= EFFECT_FRAME;
+				}
+
+				if (GetBossSponeCnt() >= BOSS_SPONE_TIME)
+				{
+					g_aEffect[i].use = FALSE;
+				}
 			}
 		}
 	}

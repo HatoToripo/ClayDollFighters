@@ -70,9 +70,9 @@ cbuffer FogBuffer : register( b5 )
 };
 
 // 縁取り用バッファ
-cbuffer Fuchi : register(b6)
+cbuffer RimLight : register(b6)
 {
-	int			fuchi;
+	int			rim;
 	int			fill[3];
 };
 
@@ -209,7 +209,7 @@ void PixelShaderPolygon( in  float4 inPosition		: SV_POSITION,
 	}
 
 	//縁取り
-	if (fuchi == 1)
+    if (rim == 1)
 	{
 		float angle = dot(normalize(inWorldPos.xyz - Camera.xyz), normalize(inNormal));
         if ((angle < 0.5f) && (angle > -0.5f))
@@ -219,4 +219,15 @@ void PixelShaderPolygon( in  float4 inPosition		: SV_POSITION,
 			outDiffuse.bg = 0.0f;			
 		}
 	}
+    else if (rim == 2)
+    {
+        float angle = dot(normalize(inWorldPos.xyz - Camera.xyz), normalize(inNormal));
+        if ((angle < 0.5f) && (angle > -0.5f))
+        //if (angle > -0.3f)
+        {
+            outDiffuse.r = 0.0f;
+            outDiffuse.bg = 1.0f;
+        }
+    }
+
 }
