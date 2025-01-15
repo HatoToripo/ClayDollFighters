@@ -13,8 +13,8 @@
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-#define TEXTURE_X					(25.0f)		// ボードの横幅
-#define TEXTURE_Y					(25.0f)	// ボードの縦幅
+#define TEXTURE_X					(0.0f)		// 背景の横幅
+#define TEXTURE_Y					(0.0f)		// 背景の縦幅
 #define TEXTURE_WIDTH				(SCREEN_WIDTH - TEXTURE_X * 2)		// ボードの横幅
 #define TEXTURE_HEIGHT				(SCREEN_HEIGHT - TEXTURE_Y * 2)	// ボードの縦幅
 
@@ -63,7 +63,7 @@ enum {
 };
 
 enum {
-	TEXTURE_BOARD,
+	TEXTURE_BG,
 	TEXTURE_VOLSIZE,
 	TEXTURE_BAR,
 	TEXTURE_CIRCLE,
@@ -388,7 +388,7 @@ void DrawSetting(void)
 	SetMaterial(material);
 
 	 //ボードを描画
-	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[TEXTURE_BOARD]);
+	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[TEXTURE_BG]);
 
 	float px = TEXTURE_X;		// 表示位置X
 	float py = TEXTURE_Y;		// 表示位置Y
