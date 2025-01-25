@@ -200,4 +200,36 @@ BOOL RayCast(XMFLOAT3 xp0, XMFLOAT3 xp1, XMFLOAT3 xp2, XMFLOAT3 xpos0, XMFLOAT3 
 }
 
 
+//=============================================================================
+// 扇形の当たり判定処理
+// サイズは半径
+// 戻り値：当たってたらTRUE
+//=============================================================================
+BOOL CollisionSector(XMFLOAT3 pos, XMFLOAT3 center, XMFLOAT3 direction, float radius, float angle)
+{
+	// 方向ベクトル (XZ 平面のみ考慮)
+	XMVECTOR dir = XMVector3Normalize(XMVectorSet(direction.x, 0.0f, direction.z, 0.0f));
 
+	// 点と中心を結ぶベクトル (XZ 平面のみ考慮)
+	XMVECTOR vector = XMVectorSet(pos.x - center.x, 0.0f, pos.z - center.z, 0.0f);
+	float distance = XMVector3Length(vector).m128_f32[0];
+
+	// 距離判定
+	if (distance > radius) {
+		return FALSE;
+	}
+
+	// 正規化したベクトル
+	XMVECTOR vectorNormalized = XMVector3Normalize(vector);
+
+	// 内積で角度判定
+	float dot = dotProduct(&dir, &vectorNormalized);
+	float cosHalfAngle = cosf(angle / 2.0f);
+
+	if (dot >= cosHalfAngle)
+	{
+		return TRUE;
+	}
+
+	return FALSE;
+}

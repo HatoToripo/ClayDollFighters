@@ -8,6 +8,7 @@
 #include "input.h"
 #include "score.h"
 #include "fade.h"
+#include "player.h"
 
 //*****************************************************************************
 // マクロ定義
@@ -121,6 +122,11 @@ void UpdateTutorial(void)
 		if (tutorialNum >= CONTROLLER_MAX)
 		{
 			g_TutorialFlg = FALSE;
+			PLAYER* parts = GetPlayerParts();
+			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+			{
+				parts[i].time[PLAYER_ANIM_MOVE] = 0.0f;
+			}
 		}
 	}
 	// ゲームパッドで入力処理
@@ -130,6 +136,11 @@ void UpdateTutorial(void)
 		if (tutorialNum >= CONTROLLER_MAX)
 		{
 			g_TutorialFlg = FALSE;
+			PLAYER* parts = GetPlayerParts();
+			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+			{
+				parts[i].time[PLAYER_ANIM_MOVE] = 0.0f;
+			}
 		}
 	}
 	else if (IsButtonTriggered(0, BUTTON_B))
@@ -138,9 +149,13 @@ void UpdateTutorial(void)
 		if (tutorialNum >= CONTROLLER_MAX)
 		{
 			g_TutorialFlg = FALSE;
+			PLAYER* parts = GetPlayerParts();
+			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+			{
+				parts[i].time[PLAYER_ANIM_MOVE] = 0.0f;
+			}
+		}
 	}
-}
-
 
 #ifdef _DEBUG	// デバッグ情報を表示する
 

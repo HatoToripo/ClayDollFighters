@@ -66,7 +66,23 @@ struct RIM_LIGHT
 	int			fill[3];
 };
 
+struct DISSOLVE_CBUFFER
+{
+	XMFLOAT4 edgeColor; // エッジの色0
+	float Threshold; // ディゾルブの閾値
+	float edgeWidth; // エッジの幅
+	int Enable;		// ディゾルブ有効・無効フラグ
+	int Dummy;
+};
 
+// 扇形用バッファ
+//struct SECTOR_CBUFFER
+//{
+//	float startAngle;
+//	float endAngle;
+//	int flag;
+//	int Dummy; //16byte境界用
+//};
 //*****************************************************************************
 // プロトタイプ宣言
 //*****************************************************************************
@@ -97,6 +113,8 @@ static ID3D11Buffer*			g_LightBuffer = NULL;
 static ID3D11Buffer*			g_FogBuffer = NULL;
 static ID3D11Buffer*			g_RimLightBuffer = NULL;
 static ID3D11Buffer*			g_CameraBuffer = NULL;
+static ID3D11Buffer*			g_DissolveBuffer = NULL;
+//static ID3D11Buffer*			g_SectorBuffer = NULL;
 
 static ID3D11DepthStencilState* g_DepthStateEnable;
 static ID3D11DepthStencilState* g_DepthStateDisable;
@@ -118,6 +136,8 @@ static LIGHT_CBUFFER	g_Light;
 static FOG_CBUFFER		g_Fog;
 
 static RIM_LIGHT		g_RimLight;
+static DISSOLVE_CBUFFER	g_Dissolve;
+//static SECTOR_CBUFFER	g_Sector;
 
 static float g_ClearColor[4] = { 0.3f, 0.3f, 0.3f, 1.0f };	// 背景色
 
@@ -364,6 +384,40 @@ void SetShaderCamera(XMFLOAT3 pos)
 	GetDeviceContext()->UpdateSubresource(g_CameraBuffer, 0, NULL, &tmp, 0, 0);
 }
 
+void SetDissolveBuffer(BOOL flag, float threshold)
+{
+	g_Dissolve.Enable = flag;
+	g_Dissolve.Threshold = threshold;
+	g_Dissolve.edgeWidth = 0.05f;
+	GetDeviceContext()->UpdateSubresource(g_DissolveBuffer, 0, NULL, &g_Dissolve, 0, 0);
+}
+
+void SetDissolve(DISSOLVE* pDissolve)
+{
+	g_Dissolve.edgeColor = pDissolve->edgeColor;
+}
+
+// 扇形用
+//void SetSectorBuffer(void)
+//{
+//	GetDeviceContext()->UpdateSubresource(g_SectorBuffer, 0, NULL, &g_Sector, 0, 0);
+//}
+//
+//void SetSectorFlag(BOOL flag)
+//{
+//	// フラグを更新する
+//	g_Sector.flag = flag;
+//
+//	SetSectorBuffer();
+//}
+//
+//void SetSector(SECTOR* pSec)
+//{
+//	g_Sector.startAngle = pSec->startAngle;
+//	g_Sector.endAngle = pSec->endAngle;
+//
+//	SetSectorBuffer();
+//}
 
 
 //=============================================================================
@@ -621,7 +675,22 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 	
 	pPSBlob->Release();
 
+	ID3D11ShaderResourceView* g_NoiseTexture = nullptr;
 
+	// ノイズテクスチャを読み込む
+	hr = D3DX11CreateShaderResourceViewFromFile(
+		g_D3DDevice,              // Direct3Dデバイス
+		"data/TEXTURE/noisetexture1.png",     // ノイズテクスチャファイルのパス
+		nullptr,                  // 読み込みオプション（デフォルト）
+		nullptr,                  // 非同期読み込み用（デフォルト）
+		&g_NoiseTexture,          // シェーダーリソースビュー
+		nullptr                   // エラーメッセージ（デフォルト）
+	);
+
+	if (FAILED(hr)) {
+		MessageBox(nullptr, "Failed to load noise texture", "Error", MB_OK | MB_ICONERROR);
+	}
+	g_ImmediateContext->PSSetShaderResources(1, 1, &g_NoiseTexture); // スロット0に設定
 	// 定数バッファ生成
 	D3D11_BUFFER_DESC hBufferDesc;
 	hBufferDesc.ByteWidth = sizeof(XMMATRIX);
@@ -676,6 +745,17 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 	g_ImmediateContext->VSSetConstantBuffers(7, 1, &g_CameraBuffer);
 	g_ImmediateContext->PSSetConstantBuffers(7, 1, &g_CameraBuffer);
 
+	//ディソルブ
+	hBufferDesc.ByteWidth = sizeof(DISSOLVE_CBUFFER);
+	g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_DissolveBuffer);
+	g_ImmediateContext->VSSetConstantBuffers(8, 1, &g_DissolveBuffer);
+	g_ImmediateContext->PSSetConstantBuffers(8, 1, &g_DissolveBuffer);
+
+	//扇形
+	//hBufferDesc.ByteWidth = sizeof(XMFLOAT4);
+	//g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_SectorBuffer);
+	//g_ImmediateContext->VSSetConstantBuffers(8, 1, &g_SectorBuffer);
+	//g_ImmediateContext->PSSetConstantBuffers(8, 1, &g_SectorBuffer);
 
 	// 入力レイアウト設定
 	g_ImmediateContext->IASetInputLayout( g_VertexLayout );
@@ -726,6 +806,8 @@ void UninitRenderer(void)
 	if (g_MaterialBuffer)		g_MaterialBuffer->Release();
 	if (g_LightBuffer)			g_LightBuffer->Release();
 	if (g_FogBuffer)			g_FogBuffer->Release();
+	if (g_DissolveBuffer)		g_DissolveBuffer->Release();
+	//if (g_SectorBuffer)			g_SectorBuffer->Release();
 
 	if (g_VertexLayout)			g_VertexLayout->Release();
 	if (g_VertexShader)			g_VertexShader->Release();

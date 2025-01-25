@@ -27,3 +27,4 @@ float dotProduct(XMVECTOR *v1, XMVECTOR *v2);
 void crossProduct(XMVECTOR *ret, XMVECTOR *v1, XMVECTOR *v2);
 BOOL RayCast(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, XMFLOAT3 pos0, XMFLOAT3 pos1, XMFLOAT3 *hit, XMFLOAT3 *normal);
 
+BOOL CollisionSector(XMFLOAT3 pos, XMFLOAT3 center, XMFLOAT3 direction, float radius, float angle);

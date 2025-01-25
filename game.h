@@ -15,3 +15,5 @@ void UninitGame(void);
 void UpdateGame(void);
 void DrawGame(void);
 
+int GetViewPortTypeGame(void);
+int GetPlayerNum(void);

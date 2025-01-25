@@ -19,7 +19,9 @@
 #include "title.h"
 #include "result.h"
 #include "debugproc.h"
-
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
@@ -52,7 +54,6 @@ char	g_DebugStr[2048] = WINDOW_NAME;		// デバッグ文字表示用
 #endif
 
 int g_Mode = MODE_TITLE;					// 起動時の画面を設定
-
 //=============================================================================
 // メイン関数
 //=============================================================================
@@ -201,6 +202,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 //=============================================================================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+#ifdef _DEBUG
+
+	extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+		return true;
+	// (Your code process Win32 messages)
+
+#endif
+
 	switch(message)
 	{
 	case WM_DESTROY:
@@ -234,6 +244,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 HRESULT Init(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 {
 	InitRenderer(hInstance, hWnd, bWindow);
+
+#ifdef _DEBUG
+
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // imguiのキーボード操作
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // imguiのパッド操作
+
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplWin32_Init(hWnd);            // YOUR HWNDにhWndを渡す
+	ImGui_ImplDX11_Init(GetDevice(), GetDeviceContext());    // YOUR_D3D_DEVICEをGetDeviceに変更 // YOUR_D3D_DEVICE_CONTEXTをGetDeviceContextに変更
+
+#endif
 
 	InitLight();
 
@@ -281,6 +307,13 @@ void Uninit(void)
 	//入力の終了処理
 	UninitInput();
 
+#ifdef _DEBUG
+
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
+#endif
+
 	UninitRenderer();
 }
 
@@ -291,6 +324,17 @@ void Update(void)
 {
 	// 入力の更新処理
 	UpdateInput();
+
+#ifdef _DEBUG
+
+	// (Your code process and dispatch Win32 messages)
+// Imguiの画面を作る
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	ImGui::ShowDemoWindow(); // imgui_demo.cpp内のものを表示（サンプル表示）
+
+#endif
 
 	// ライトの更新処理
 	UpdateLight();
@@ -308,6 +352,7 @@ void Update(void)
 		}
 		else
 		{
+			UpdatePlayer();
 			UpdateTitle();
 		}
 		break;
@@ -354,26 +399,54 @@ void Draw(void)
 	case MODE_TITLE:		// タイトル画面の描画
 		SetViewPort(TYPE_FULL_SCREEN);
 
-		// 2Dの物を描画する処理
-		// Z比較なし
-		SetDepthEnable(FALSE);
-
-		// ライティングを無効
-		SetLightEnable(FALSE);
-
 		if (GetSettingFlag() == TRUE)
-		{
+		{		
+			// 2Dの物を描画する処理
+			// Z比較なし
+			SetDepthEnable(FALSE);
+
+			// ライティングを無効
+			SetLightEnable(FALSE);
+
 			DrawSetting();
+
+			// ライティングを有効に
+			SetLightEnable(TRUE);
+
+			// Z比較あり
+			SetDepthEnable(TRUE);
 		}
 		else
 		{
-			DrawTitle();
-		}
-		// ライティングを有効に
-		SetLightEnable(TRUE);
+			PLAYER* player = GetPlayer();
+			CAMERA* camera = GetCamera();
 
-		// Z比較あり
-		SetDepthEnable(TRUE);
+
+			XMFLOAT3 pos = player->pos;
+
+			camera->pos = player->pos;
+			pos.x += 20.0f;
+			pos.y += 5.0f;			// カメラ酔いを防ぐためにクリアしている
+			pos.z -= 5.0f;
+			SetCameraAT(pos);
+			SetCamera();
+
+			DrawPlayer();
+			// 2Dの物を描画する処理
+			// Z比較なし
+			SetDepthEnable(FALSE);
+
+			// ライティングを無効
+			SetLightEnable(FALSE);
+
+			DrawTitle();
+			// ライティングを有効に
+			SetLightEnable(TRUE);
+
+			// Z比較あり
+			SetDepthEnable(TRUE);
+
+		}
 		break;
 
 	case MODE_GAME:			// ゲーム画面の描画
@@ -447,12 +520,18 @@ void Draw(void)
 #ifdef _DEBUG
 	// デバッグ表示
 	DrawDebugProc();
+
+	// imgui画面描画
+// (Your code clears your framebuffer, renders your other stuff etc.)
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	// (Your code calls swapchain's Present() function)
+	// 
+	// バックバッファ、フロントバッファ入れ替え
 #endif
 
-	// バックバッファ、フロントバッファ入れ替え
 	Present();
 }
-
 
 long GetMousePosX(void)
 {
@@ -500,6 +579,9 @@ void SetMode(int mode)
 	{
 	case MODE_TITLE:
 		// タイトル画面の初期化
+		UninitCamera();
+		InitCamera();
+		InitPlayer();
 		InitTitle();
 		InitSetting();
 		PlaySound(SOUND_LABEL_BGM_op);

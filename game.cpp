@@ -21,6 +21,7 @@
 #include "tree.h"
 #include "mark.h"
 #include "arrow.h"
+#include "radar.h"
 #include "bullet.h"
 #include "score.h"
 #include "tutorial.h"
@@ -34,7 +35,7 @@
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-
+#define ANIM_CNT		(4)
 
 
 //*****************************************************************************
@@ -51,7 +52,8 @@ static int	g_ViewPortType_Game = TYPE_FULL_SCREEN;
 
 static BOOL	g_bPause = TRUE;	// ポーズON/OFF
 
-
+static int g_PlayerNum = 0;
+static int g_TimeCnt = 0;
 //=============================================================================
 // 初期化処理
 //=============================================================================
@@ -99,6 +101,9 @@ HRESULT InitGame(void)
 
 	// 矢印マークの初期化
 	InitArrow();
+
+	// 検知範囲の初期化
+	InitRadar();
 
 	// 弾の初期化
 	InitBullet();
@@ -150,6 +155,9 @@ void UninitGame(void)
 	// 弾の終了処理
 	UninitBullet();
 
+	// 検知範囲の終了処理
+	UninitRadar();
+
 	// 矢印マークの終了処理
 	UninitArrow();
 
@@ -182,11 +190,18 @@ void UninitGame(void)
 void UpdateGame(void)
 {
 #ifdef _DEBUG
-	//if (GetKeyboardTrigger(DIK_V))
-	//{
-	//	g_ViewPortType_Game = (g_ViewPortType_Game + 1) % TYPE_NONE;
-	//	SetViewPort(g_ViewPortType_Game);
-	//}
+	if (GetKeyboardTrigger(DIK_V))
+	{
+		g_ViewPortType_Game = TYPE_LEFT_HALF_SCREEN;
+		SetViewPort(g_ViewPortType_Game);
+	}
+
+	else if(GetKeyboardTrigger(DIK_F))
+	{
+		g_ViewPortType_Game = TYPE_FULL_SCREEN;
+		SetViewPort(g_ViewPortType_Game);
+	}
+
 
 	//if (GetKeyboardTrigger(DIK_P))
 	//{
@@ -202,6 +217,10 @@ void UpdateGame(void)
 	// チュートリアル中なら更新しない
 	if (GetTutorialFlg() == FALSE)
 	{
+		g_TimeCnt = (g_TimeCnt + 1) % ANIM_CNT;
+		if (g_ViewPortType_Game != TYPE_FULL_SCREEN && g_TimeCnt != 0)
+			return;
+
 		// 地面処理の更新
 		UpdateMeshField();
 
@@ -222,6 +241,9 @@ void UpdateGame(void)
 
 		// 矢印マークの更新処理
 		UpdateArrow();
+
+		// 検知範囲の更新処理
+		UpdateRadar();
 
 		// 弾の更新処理
 		UpdateBullet();
@@ -287,6 +309,9 @@ void DrawGame0(void)
 	// 矢印マークの描画処理
 	DrawArrow();
 
+	// 検知範囲の描画処理
+	DrawRadar();
+
 	// パーティクルの描画処理
 	DrawParticle();
 
@@ -331,18 +356,20 @@ void DrawGame(void)
 
 #ifdef _DEBUG
 	// デバッグ表示
-	PrintDebugProc("ViewPortType:%d\n", g_ViewPortType_Game);
+	//PrintDebugProc("ViewPortType:%d\n", g_ViewPortType_Game);
 
 #endif
 
+	PLAYER* player = GetPlayer();
+	CAMERA* camera = GetCamera();
 	// プレイヤー視点
-	pos = GetPlayer()->pos;
-	pos.y = 0.0f;			// カメラ酔いを防ぐためにクリアしている
+	pos = player->pos;
+	pos.y = 5.0f;			// カメラ酔いを防ぐためにクリアしている
 	ENEMY* boss = GetBoss();
 	if (GetBossFlg() == TRUE && GetBossSponeCnt() < BOSS_SPONE_TIME)
 	{
 		pos = boss->pos;
-		pos.y = 0.0f;
+		pos.y = 5.0f;
 		AddBossSponeCnt();
 		if (GetBossSponeCnt() >= BOSS_SPONE_TIME / 3 * 2)
 		{
@@ -357,34 +384,58 @@ void DrawGame(void)
 	{
 	case TYPE_FULL_SCREEN:
 		SetViewPort(TYPE_FULL_SCREEN);
+		for (int i = 0; i < PLAYER_MAX; i++)
+		{
+			player[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		}
 		DrawGame0();
 		break;
 
 	case TYPE_LEFT_HALF_SCREEN:
 	case TYPE_RIGHT_HALF_SCREEN:
 		SetViewPort(TYPE_LEFT_HALF_SCREEN);
+		g_PlayerNum = 0;
+		pos = player->pos;
+		pos.y = 0.0f;			// カメラ酔いを防ぐためにクリアしている
+		pos.y -= 8.0f;			// カメラ酔いを防ぐためにクリアしている
+		pos.z += 30.0f;			// カメラ酔いを防ぐためにクリアしている
+		player->scl = XMFLOAT3(2.0f, 1.0f, 2.0f);
+		SetCameraAT(pos);
+		camera->pos.y = player->pos.y + 5.0f;
+		SetCamera();
+
 		DrawGame0();
 
-		// エネミー視点
-		pos = GetEnemy()->pos;
-		pos.y = 0.0f;
-		SetCameraAT(pos);
+		//// エネミー視点
+		//pos = GetEnemy()->pos;
+		//pos.y = 0.0f;
+		//SetCameraAT(pos);
 		SetCamera();
 		SetViewPort(TYPE_RIGHT_HALF_SCREEN);
+		g_PlayerNum = 1;
+		(player + 1)->scl = XMFLOAT3(2.0f, 1.0f, 2.0f);
 		DrawGame0();
 		break;
 
 	case TYPE_UP_HALF_SCREEN:
 	case TYPE_DOWN_HALF_SCREEN:
 		SetViewPort(TYPE_UP_HALF_SCREEN);
-		DrawGame0();
-
-		// エネミー視点
-		pos = GetEnemy()->pos;
-		pos.y = 0.0f;
+		g_PlayerNum = 0;
+		pos = GetPlayer()->pos;
+		pos.y = 0.0f;			// カメラ酔いを防ぐためにクリアしている
+		pos.z += 15.0f;			// カメラ酔いを防ぐためにクリアしている
 		SetCameraAT(pos);
 		SetCamera();
+
+		DrawGame0();
+
+		//// エネミー視点
+		//pos = GetEnemy()->pos;
+		//pos.y = 0.0f;
+		//SetCameraAT(pos);
+		SetCamera();
 		SetViewPort(TYPE_DOWN_HALF_SCREEN);
+		g_PlayerNum = 1;
 		DrawGame0();
 		break;
 
@@ -465,4 +516,12 @@ void CheckHit(void)
 	}
 }
 
+int GetViewPortTypeGame(void)
+{
+	return g_ViewPortType_Game;
+}
 
+int GetPlayerNum(void)
+{
+	return g_PlayerNum;
+}

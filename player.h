@@ -11,7 +11,7 @@
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
-#define MAX_PLAYER		(1)					// プレイヤーの数
+#define PLAYER_MAX	(2)					// プレイヤーの数
 
 #define	PLAYER_SIZE		(3.0f)				// 当たり判定の大きさ
 #define	PLAYER_HP_MAX	(10)				// プレイヤーの体力の最大値
@@ -68,6 +68,7 @@ public:
 	BOOL				load;
 	DX11_MODEL			model;				// モデル情報
 	XMFLOAT4			diffuse[MODEL_MAX_MATERIAL];	// モデルの色
+	float				dissolveCnt;		// ディゾルブのカウント
 
 	int					shadowIdx;			// 影のインデックス番号
 
