@@ -42,6 +42,7 @@ static int					g_TexNo;			// テクスチャ番号
 
 static char *g_TextureName[] =
 {
+
 	"data/TEXTURE/arrow.png",
 };
 
@@ -172,8 +173,7 @@ void DrawArrow(void)
 		// カリング無効
 		SetCullingMode(CULL_MODE_NONE);
 
-		XMMATRIX mtxScl, mtxTranslate, mtxRot, mtxWorld, mtxView;
-		CAMERA* cam = GetCamera();
+		XMMATRIX mtxScl, mtxTranslate, mtxRot, mtxWorld;
 
 		// 頂点バッファ設定
 		UINT stride = sizeof(VERTEX_3D);
@@ -188,9 +188,6 @@ void DrawArrow(void)
 			if (enemy[i].use == FALSE) continue;
 			// ワールドマトリックスの初期化
 			mtxWorld = XMMatrixIdentity();
-
-			// ビューマトリックスを取得
-			mtxView = XMLoadFloat4x4(&cam->mtxView);
 
 
 			// スケールを反映
@@ -225,10 +222,6 @@ void DrawArrow(void)
 			if (boss[i].use == FALSE) continue;
 			// ワールドマトリックスの初期化
 			mtxWorld = XMMatrixIdentity();
-
-			// ビューマトリックスを取得
-			mtxView = XMLoadFloat4x4(&cam->mtxView);
-
 
 			// スケールを反映
 			mtxScl = XMMatrixScaling(g_Arrow[i].scl.x, g_Arrow[i].scl.y, g_Arrow[i].scl.z);

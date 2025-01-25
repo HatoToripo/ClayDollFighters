@@ -44,7 +44,7 @@ static int						g_Time;					// タイム
 static int						g_Cnt;					// カウンタ
 
 static BOOL						g_Load = FALSE;
-
+static BOOL						g_StopFlg = FALSE;
 
 //=============================================================================
 // 初期化処理
@@ -120,7 +120,7 @@ void UninitTime(void)
 //=============================================================================
 void UpdateTime(void)
 {
-	if (GetFade() == FADE_NONE)
+	if (GetFade() == FADE_NONE || g_StopFlg == FALSE)
 	{
 		if (g_Time < 0) return;
 		g_Cnt = (g_Cnt + 1) % 60;

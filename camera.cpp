@@ -13,8 +13,8 @@
 // マクロ定義
 //*****************************************************************************
 #define	POS_X_CAM			(0.0f)			// カメラの初期位置(X座標)
-#define	POS_Y_CAM			(40.0f)			// カメラの初期位置(Y座標)
-#define	POS_Z_CAM			(-80.0f)		// カメラの初期位置(Z座標)
+#define	POS_Y_CAM			(20.0f)			// カメラの初期位置(Y座標)
+#define	POS_Z_CAM			(-50.0f)		// カメラの初期位置(Z座標)
 
 #define POS_X_MAX			(270.0f)		// カメラの最大値(X座標)
 #define POS_X_MAX			(270.0f)		// カメラの最大値(Z座標)
@@ -170,9 +170,9 @@ void UpdateCamera(void)
 
 
 #ifdef _DEBUG	// デバッグ情報を表示する
-	PrintDebugProc("Camera:ZC QE TB YN UM R\n");
-	PrintDebugProc("Camera:POS %f, %f, %f\n ", g_Camera.pos.x, g_Camera.pos.y, g_Camera.pos.z);
-	PrintDebugProc("Camera:AT %f, %f, %f\n ", g_Camera.at.x, g_Camera.at.y, g_Camera.at.z);
+	//PrintDebugProc("Camera:ZC QE TB YN UM R\n");
+	//PrintDebugProc("Camera:POS %f, %f, %f\n ", g_Camera.pos.x, g_Camera.pos.y, g_Camera.pos.z);
+	//PrintDebugProc("Camera:AT %f, %f, %f\n ", g_Camera.at.x, g_Camera.at.y, g_Camera.at.z);
 #endif
 }
 

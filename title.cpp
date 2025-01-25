@@ -292,7 +292,7 @@ void DrawTitle(void)
 		SetSpriteLeftTop(g_VertexBuffer, 0.0f, 0.0f, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0.0f, 0.1f, 1.0f, 0.1f);
 
 		// ポリゴン描画
-		GetDeviceContext()->Draw(4, 0);
+		//GetDeviceContext()->Draw(4, 0);
 	}
 
 	// タイトルの描画

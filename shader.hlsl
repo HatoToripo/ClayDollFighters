@@ -82,6 +82,33 @@ cbuffer CameraBuffer : register(b7)
 	float4 Camera;
 }
 
+// ディゾルブ
+struct DISSOLVE
+{
+    float4 edgeColor; // エッジの色0
+    float Threshold; // ディゾルブの閾値
+    float edgeWidth; // エッジの幅
+    int Enable;
+    int Dummy; //16byte境界用
+};
+// ディゾルブ用バッファ
+cbuffer DissolveBuffer : register(b8)
+{
+    DISSOLVE Dissolve;
+}
+
+//struct SECTOR
+//{
+//    float startAngle;
+//    float endAngle;
+//    int flag;
+//    int Dummy; //16byte境界用
+//};
+
+//cbuffer SectorBuffer : register(b8)
+//{
+//    SECTOR Sector;
+//};
 
 
 //=============================================================================
@@ -118,6 +145,7 @@ void VertexShaderPolygon( in  float4 inPosition		: POSITION0,
 // グローバル変数
 //*****************************************************************************
 Texture2D		g_Texture : register( t0 );
+Texture2D		noiseTexture : register(t1); // ノイズマップ
 SamplerState	g_SamplerState : register( s0 );
 
 
@@ -230,4 +258,44 @@ void PixelShaderPolygon( in  float4 inPosition		: SV_POSITION,
         }
     }
 
+    if (Dissolve.Enable == 1)
+    {
+        float noiseValue = noiseTexture.Sample(g_SamplerState, inTexCoord).r;
+	
+	  // ノイズ値と閾値を比較してディゾルブを適用
+        if (noiseValue < Dissolve.Threshold)
+        {
+        // エッジの計算
+            if (Dissolve.Threshold - noiseValue < Dissolve.edgeWidth)
+            {
+                outDiffuse = Dissolve.edgeColor; // エッジの色
+            }
+            discard;
+        }
+    }
+	//if (Sector.flag == true)
+ //   {
+	//	// UV座標系の中心からのベクトル
+ //       float2 dir = inTexCoord - float2(0.5f, 0.5f);
+ //       float dist = length(dir);
+		
+	//	if (dist > 0.5f)
+ //       {
+ //           outDiffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+ //       }
+		
+	//	// 角度計算
+ //       float angle = atan2(dir.y, dir.x);
+		
+	//	// 扇形の範囲内チェック
+ //       if (angle >= 0.0f && angle <= 1.0f)
+ //       {
+ //           outDiffuse = inDiffuse;
+ //       }
+		
+ //       else
+ //       {
+ //           outDiffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+ //       }
+ //   }
 }

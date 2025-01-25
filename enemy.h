@@ -16,6 +16,8 @@
 #define	ENEMY_SIZE		(4.0f)				// 当たり判定の大きさ
 #define	BOSS_SPONE_TIME	(180)				// ボス出現後カメラに映るフレーム
 #define ENEMY_OFFSET_Y		(7.0f)						// エネミーの足元をあわせる
+#define LOOK_CIRCLE			(20.0f)							// プレイヤーを検知する範囲の半径
+#define LOOK_CIRCLE_RAD	(XM_PI / 180.0f * 90.0f)
 
 enum
 {
@@ -71,6 +73,8 @@ public:
 	float				size;				// 当たり判定の大きさ
 	int					shadowIdx;			// 影のインデックス番号
 	BOOL				look;				// プレイヤーを発見した状態
+
+	float				dissolveCnt;		// ディゾルブのカウント
 
 	// 階層アニメーション用のメンバー変数
 	float				time[ENEMY_ANIM_MAX];				// 線形補間用

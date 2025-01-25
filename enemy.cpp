@@ -67,7 +67,7 @@
 #define ENEMY_LEG_Y			(-2.4f)							// 脚のy座標
 
 #define ENEMY_FOOT_X		(0.0f)							// 足のx座標
-#define ENEMY_FOOT_Y		(-1.4f)							// 足のy座標
+#define ENEMY_FOOT_Y		(-1.8f)							// 足のy座標
 
 #define ENEMY_SWORD_R_X		(0.0f)							// 剣のx座標
 #define ENEMY_SWORD_R_Y		(-2.0f)							// 剣のy座標
@@ -85,17 +85,17 @@
 #define MOVE_INTERVAL		(60 * 3)						// 次の角度を計算するタイミング
 #define ROT_INTERVAL		(5)						// 次の角度を計算するタイミング
 
-#define LOOK_CIRCLE			(30.0f)							// プレイヤーを検知する範囲の半径
-
 #define TEXTURE_MAX			(2)				// テクスチャの数
 #define TEXTURE_WIDTH		(80.0f)			// テクスチャの横幅
 #define TEXTURE_HEIGHT		(80.0f)			// テクスチャの縦幅
 
 #define ATTACK_WIDTH		(5.0f)							// 攻撃の当たり判定の幅
-#define ATTACK_DEPTH		(8.0f)							// 攻撃の当たり判定の奥行き
+#define ATTACK_DEPTH		(6.0f)							// 攻撃の当たり判定の奥行き
 #define ENEMY_ATK_CNT_MAX	(ANIM_FRAME_ATTACK * 3.0f)			// アタック全体フレーム
 
 #define BOSS_SIZE_VALUE			(2.0f)			// ボスのサイズ倍率
+
+#define DISSOLVE_VALUE			(2.0f)
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -112,6 +112,9 @@ static ENEMY			g_Parts[ENEMY_MAX][ENEMY_PARTS_MAX];				// エネミー
 static ENEMY			g_Boss[BOSS_MAX];				// ボス
 
 static ENEMY			g_BossParts[BOSS_MAX][ENEMY_PARTS_MAX];				// ボスのパーツ
+
+static DISSOLVE			g_EnemyDissolve[ENEMY_MAX];				// エネミーのディゾルブ
+static DISSOLVE			g_EnemyPartsDissolve[ENEMY_MAX][ENEMY_PARTS_MAX];				// エネミーのパーツのディゾルブ
 
 static BOOL				g_BossFlg;						// ボス戦突入フラグ
 static int				g_BossSponeCnt;						// ボス出現カウンタ
@@ -437,6 +440,7 @@ HRESULT InitEnemy(void)
 		g_Enemy[i].moveCnt  = 0;		// 移動間隔クリア
 		g_Enemy[i].moveFlg  = TRUE;	// 移動フラグクリア
 		g_Enemy[i].colCnt  = 0;			// 無敵時間クリア
+		g_Enemy[i].dissolveCnt = 0.0f;			// 無敵時間クリア
 		g_Enemy[i].size = ENEMY_SIZE;	// 当たり判定の大きさ
 
 		// モデルのディフューズを保存しておく。色変え対応の為。
@@ -448,6 +452,8 @@ HRESULT InitEnemy(void)
 		
 		g_Enemy[i].use = TRUE;			// TRUE:生きてる
 		g_Enemy[i].parent = NULL;
+
+		g_EnemyDissolve[i].edgeColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 		for (int j = 0; j < ENEMY_PARTS_MAX; j++)
 		{
@@ -475,6 +481,7 @@ HRESULT InitEnemy(void)
 			// パーツの初期アニメーションを設定
 			g_AnimNum[i] = ENEMY_ANIM_STOP;
 
+			g_EnemyPartsDissolve[i][j].edgeColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 
 		g_Parts[i][ENEMY_PARTS_HEAD].use = TRUE;
@@ -854,10 +861,13 @@ void UpdateEnemy(void)
 			float rad = atan2f(z, x);
 
 			XMFLOAT3 pos = g_Enemy[i].pos;
-			pos.x -= (float)sinf(g_Enemy[i].rot.y) * LOOK_CIRCLE;
-			pos.z -= (float)cosf(g_Enemy[i].rot.y) * LOOK_CIRCLE;
+			//pos.x -= (float)sinf(g_Enemy[i].rot.y) * LOOK_CIRCLE;
+			//pos.z -= (float)cosf(g_Enemy[i].rot.y) * LOOK_CIRCLE;
 
-			if (CollisionBC(player->pos, pos, player->size, LOOK_CIRCLE))
+			//if (CollisionBC(player->pos, pos, player->size, LOOK_CIRCLE))
+
+			XMFLOAT3 dir = XMFLOAT3((float)cosf(-(g_Enemy[i].rot.y + RADIAN * 90.0f)), 0.0f, (float)sinf(-(g_Enemy[i].rot.y + LOOK_CIRCLE_RAD)));
+			if (CollisionSector(player->pos, g_Enemy[i].pos, dir, LOOK_CIRCLE, LOOK_CIRCLE_RAD))
 			{
 				g_Enemy[i].look = TRUE;
 				g_Enemy[i].rot.y = -(RADIAN * 90.0f + rad);
@@ -984,24 +994,24 @@ void UpdateEnemy(void)
 			SetPositionShadow(g_Enemy[i].shadowIdx, pos);
 		}
 	
-		// エネミーをだんだん傾ける処理
-		else if (g_Enemy[i].use == FALSE && g_Enemy[i].rot.z <= RADIAN * 90.0f)
+		// エネミーのディゾルブ処理
+		else if (g_Enemy[i].use == FALSE && g_Enemy[i].dissolveCnt <= RADIAN * 90.0f)
 		{
-			g_Enemy[i].rot.z += RADIAN * 5.0f;
-			g_Enemy[i].pos.y -= cosf(RADIAN * 5.0f) * ENEMY_OFFSET_Y * 0.03f;
+			g_Enemy[i].dissolveCnt += RADIAN * 1.0f;
+			//g_Enemy[i].pos.y -= cosf(RADIAN * 5.0f) * ENEMY_OFFSET_Y * 0.03f;
 			// 傾きに合わせて色も薄くしていく
-			for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
-			{
-				SetModelDiffuse(&g_Enemy[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f * (float)cos(g_Enemy[i].rot.z)));
-			}
+			//for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
+			//{
+			//	SetModelDiffuse(&g_Enemy[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f * (float)cos(g_Enemy[i].rot.z)));
+			//}
 
-			for (int j = 0; j < ENEMY_PARTS_MAX; j++)
-			{
-				for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
-				{
-					SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f * (float)cos(g_Enemy[i].rot.z)));
-				}
-			}
+			//for (int j = 0; j < ENEMY_PARTS_MAX; j++)
+			//{
+			//	for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+			//	{
+			//		SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f * (float)cos(g_Enemy[i].rot.z)));
+			//	}
+			//}
 		}
 	}
 
@@ -1106,7 +1116,7 @@ void DrawEnemy(void)
 
 	for (int i = 0; i < ENEMY_MAX; i++)
 	{
-		if (g_Enemy[i].use == FALSE && g_Enemy[i].rot.z >= RADIAN * 90.0f) continue;
+		if (g_Enemy[i].use == FALSE && g_Enemy[i].dissolveCnt >= RADIAN * 90.0f) continue;
 		XMFLOAT4 enemyDiffuse[MODEL_MAX_MATERIAL];
 		XMFLOAT4 partsDiffuse[ENEMY_PARTS_MAX][MODEL_MAX_MATERIAL];
 
@@ -1178,6 +1188,12 @@ void DrawEnemy(void)
 
 				// ワールドマトリックスの設定
 				SetWorldMatrix(&mtxWorld);
+
+				if (g_Enemy[i].use == FALSE)
+				{
+					SetDissolve(&g_EnemyDissolve[i]);
+					SetDissolveBuffer(TRUE, sinf(g_Enemy[i].dissolveCnt));
+				}
 
 				// モデル描画
 				DrawModel(&g_Parts[i][j].model);
@@ -1256,6 +1272,7 @@ void DrawEnemy(void)
 			}
 
 		}
+		SetDissolveBuffer(FALSE, 0.0f);
 	}
 
 	// ボス描画
@@ -1592,8 +1609,6 @@ void ENEMY::Animation(int animNum1, int animNum2)
 int ENEMY::DecHP(int atk)
 {
 	hp -= atk;
-	colCnt++;
-
 	// 体力がなくなったらパーティクルなどをセット
 	if (hp <= 0)
 	{
@@ -1613,6 +1628,8 @@ int ENEMY::DecHP(int atk)
 		SetEffect(XMFLOAT3(pos.x, pos.y - ENEMY_OFFSET_Y * EFFECT_HEIGHT / 15.0f, pos.z), EFFECT_WIDTH, EFFECT_HEIGHT, EFFECT_HIT);
 		PlaySound(SOUND_LABEL_SE_hit);
 	}
+	colCnt++;
+
 	return 0;
 }
 // ボスをスポーン

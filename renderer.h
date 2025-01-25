@@ -83,6 +83,17 @@ struct FOG {
 	XMFLOAT4	FogColor;	// フォグの色
 };
 
+// ディゾルブ構造体
+struct DISSOLVE {
+	XMFLOAT4 edgeColor;
+};
+
+// 扇形構造体
+//struct SECTOR{
+//	float startAngle;
+//	float endAngle;
+//	int flag;
+//};
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -113,6 +124,12 @@ void SetLight(int index, LIGHT* light);
 
 void SetFogEnable(BOOL flag);
 void SetFog(FOG* fog);
+
+void SetDissolveBuffer(BOOL flag, float threshold);
+void SetDissolve(DISSOLVE* pDissolve);
+
+//void SetSectorFlag(BOOL flag);
+//void SetSector(SECTOR* pSec);
 
 void DebugTextOut(char* text, int x, int y);
 

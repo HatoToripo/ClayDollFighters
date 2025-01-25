@@ -9,6 +9,7 @@
 #include "light.h"
 #include "input.h"
 #include "camera.h"
+#include "game.h"
 #include "player.h"
 #include "fade.h"
 #include "enemy.h"
@@ -62,7 +63,7 @@
 #define PLAYER_LEG_Y		(-2.4f)								// 脚のy座標
 
 #define PLAYER_FOOT_X		(0.0f)								// 足のx座標
-#define PLAYER_FOOT_Y		(-1.4f)								// 足のy座標
+#define PLAYER_FOOT_Y		(-1.8f)								// 足のy座標
 
 #define PLAYER_SWORD_R_X	(0.0f)								// 剣のx座標
 #define PLAYER_SWORD_R_Y	(-2.0f)								// 剣のy座標
@@ -83,10 +84,10 @@
 #define PLAYER_ATK_CNT_MAX	(ANIM_FRAME_ATTACK * 3.0f)			// アタック全体フレーム
 
 #define BLEND_FRAME_STOP	(60.0f)							// 待機モーションに遷移するまでの時間
-#define BLEND_FRAME_MOVE	(90.0f)							// 移動モーションに遷移するまでの時間
-#define BLEND_FRAME_DASH	(90.0f)							// ダッシュモーションに遷移するまでの時間
-#define BLEND_FRAME_JUMP	(90.0f)							// ジャンプモーションに遷移するまでの時間
-#define BLEND_FRAME_ATTACK	(90.0f)							// 攻撃モーションに遷移するまでの時間
+#define BLEND_FRAME_MOVE	(120.0f)							// 移動モーションに遷移するまでの時間
+#define BLEND_FRAME_DASH	(120.0f)							// ダッシュモーションに遷移するまでの時間
+#define BLEND_FRAME_JUMP	(120.0f)							// ジャンプモーションに遷移するまでの時間
+#define BLEND_FRAME_ATTACK	(120.0f)							// 攻撃モーションに遷移するまでの時間
 
 #define ATTACK_WIDTH		(5.0f)							// 攻撃の当たり判定の幅
 #define ATTACK_DEPTH		(10.0f)							// 攻撃の当たり判定の奥行き
@@ -99,9 +100,9 @@
 //*****************************************************************************
 // グローバル変数
 //*****************************************************************************
-static PLAYER		g_Player;						// プレイヤー
+static PLAYER		g_Player[PLAYER_MAX];						// プレイヤー
 
-static PLAYER		g_Parts[PLAYER_PARTS_MAX];		// プレイヤーのパーツ用
+static PLAYER		g_Parts[PLAYER_MAX][PLAYER_PARTS_MAX];		// プレイヤーのパーツ用
 
 static float		roty = 0.0f;
 static float		g_RotDead;						// プレイヤー死亡時にだんだん薄くする
@@ -363,14 +364,16 @@ static INTERPOLATION_DATA jump_tbl_head[] = {	// pos, rot, scl, frame
 };
 
 static INTERPOLATION_DATA jump_tbl_arm_l[] = {	// pos, rot, scl, frame
-	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(RADIAN * 30.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
-	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(-RADIAN * 140.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(RADIAN * 100.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(-RADIAN * 190.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 	{ XMFLOAT3(-PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 };
 
 static INTERPOLATION_DATA jump_tbl_arm_r[] = {	// pos, rot, scl, frame
-	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(RADIAN * 30.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
-	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(RADIAN * 50.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(RADIAN * 100.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(-RADIAN * 190.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 	{ XMFLOAT3(PLAYER_ARM_X, PLAYER_ARM_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 };
 
@@ -387,27 +390,31 @@ static INTERPOLATION_DATA jump_tbl_hand_r[] = {	// pos, rot, scl, frame
 };
 
 static INTERPOLATION_DATA jump_tbl_leg_l[] = {	// pos, rot, scl, frame
-	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(-RADIAN * 20.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(-RADIAN * 45.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
 	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 };
 
 static INTERPOLATION_DATA jump_tbl_leg_r[] = {	// pos, rot, scl, frame
-	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(-RADIAN * 20.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
-	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(-RADIAN * 90.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(-PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(-RADIAN * 45.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 	{ XMFLOAT3(PLAYER_LEG_X, PLAYER_LEG_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 
 };
 
 static INTERPOLATION_DATA jump_tbl_foot_l[] = {	// pos, rot, scl, frame
-	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(RADIAN * 20.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(RADIAN * 90.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
 	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 	{ XMFLOAT3(-PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 };
 
 static INTERPOLATION_DATA jump_tbl_foot_r[] = {	// pos, rot, scl, frame
-	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(RADIAN * 20.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
-	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(RADIAN * 90.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
+	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(RADIAN * 90.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP - 5.0f },
+	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 	{ XMFLOAT3(PLAYER_FOOT_X, PLAYER_FOOT_Y, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f),	XMFLOAT3(1.0f, 1.0f, 1.0f), ANIM_FRAME_JUMP },
 
 };
@@ -559,294 +566,297 @@ static float g_AnimTransFrameCnt[PLAYER_ANIM_MAX];			// アニメーションに移行する
 //=============================================================================
 HRESULT InitPlayer(void)
 {
-	g_Player.load = TRUE;
-	LoadModel(MODEL_PLAYER, &g_Player.model);
-
-	g_Player.pos = XMFLOAT3(0.0f, PLAYER_OFFSET_Y, 0.0f);
-	g_Player.rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	g_Player.scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
-
-	g_Player.spd = 0.0f;			// 移動スピードクリア
-	g_Player.hp = 20;				// 体力の初期化
-	g_Player.gauge = 0;			// 体力の初期化
-	g_Player.colCnt = 0;			// 体力の初期化
-
-	g_Player.attack = FALSE;		// アタックフラグクリア
-	g_Player.atkVal = 1;			// 攻撃力初期化
-	g_Player.atkCnt = 0;			// 移動スピードクリア
-
-	g_Player.use = TRUE;			// TRUE:生きてる
-	g_Player.size = PLAYER_SIZE;	// 当たり判定の大きさ
-	g_Player.jump = FALSE;			// ジャンプフラグクリア
-	g_Player.jumpCnt = 0;			// ジャンプカウンタクリア
-
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Player.model, &g_Player.diffuse[0]);
-
-	// ここでプレイヤー用の影を作成している
-	XMFLOAT3 pos = g_Player.pos;
-	pos.y -= (PLAYER_OFFSET_Y - 0.1f);
-	//g_Player.shadowIdx = CreateShadow(pos, PLAYER_SHADOW_SIZE, PLAYER_SHADOW_SIZE);
-	//          ↑
-	//        このメンバー変数が生成した影のIndex番号
-
-	// キーを押した時のプレイヤーの向き
-	roty = 0.0f;
-
-	// プレイヤー死亡時徐々に薄くする 
-	g_RotDead = 0.0f;
-
-	g_Player.parent = NULL;			// 本体（親）なのでNULLを入れる
-
-
-	// 階層アニメーションの初期化
-	for (int i = 0; i < PLAYER_PARTS_MAX; i++)
+	for (int i = 0; i < PLAYER_MAX; i++)
 	{
-		g_Parts[i].use = FALSE;
+		g_Player[i].load = TRUE;
+		LoadModel(MODEL_PLAYER, &g_Player[i].model);
 
-		// 位置・回転・スケールの初期設定
-		g_Parts[i].pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		g_Parts[i].rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		g_Parts[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		g_Player[i].pos = XMFLOAT3(0.0f, PLAYER_OFFSET_Y, 0.0f);
+		g_Player[i].rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		g_Player[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-		// 親子関係
-		g_Parts[i].parent = &g_Player;		// ← ここに親のアドレスを入れる
-		//	g_Parts[腕].parent= &g_Player;		// 腕だったら親は本体（プレイヤー）
-		//	g_Parts[手].parent= &g_Paerts[腕];	// 指が腕の子供だった場合の例
+		g_Player[i].spd = 0.0f;			// 移動スピードクリア
+		g_Player[i].hp = 20;				// 体力の初期化
+		g_Player[i].gauge = 0;			// 体力の初期化
+		g_Player[i].colCnt = 0;			// 体力の初期化
 
-			// 階層アニメーション用のメンバー変数の初期化
+		g_Player[i].attack = FALSE;		// アタックフラグクリア
+		g_Player[i].atkVal = 1;			// 攻撃力初期化
+		g_Player[i].atkCnt = 0;			// 移動スピードクリア
+		g_Player[i].dissolveCnt = 0.0f;	// ディゾルブのカウンタクリア
+
+		g_Player[i].use = TRUE;			// TRUE:生きてる
+		g_Player[i].size = PLAYER_SIZE;	// 当たり判定の大きさ
+		g_Player[i].jump = FALSE;			// ジャンプフラグクリア
+		g_Player[i].jumpCnt = 0;			// ジャンプカウンタクリア
+
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Player[i].model, &g_Player[i].diffuse[0]);
+
+		// ここでプレイヤー用の影を作成している
+		XMFLOAT3 pos = g_Player[i].pos;
+		pos.y -= (PLAYER_OFFSET_Y - 0.1f);
+		//g_Player[i].shadowIdx = CreateShadow(pos, PLAYER_SHADOW_SIZE, PLAYER_SHADOW_SIZE);
+		//          ↑
+		//        このメンバー変数が生成した影のIndex番号
+
+		// キーを押した時のプレイヤーの向き
+		roty = 0.0f;
+
+		// プレイヤー死亡時徐々に薄くする 
+		g_RotDead = 0.0f;
+
+		g_Player[i].parent = NULL;			// 本体（親）なのでNULLを入れる
+
+
+		// 階層アニメーションの初期化
+		for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+		{
+			g_Parts[i][j].use = FALSE;
+
+			// 位置・回転・スケールの初期設定
+			g_Parts[i][j].pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
+			g_Parts[i][j].rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
+			g_Parts[i][j].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+			// 親子関係
+			g_Parts[i][j].parent = &g_Player[i];		// ← ここに親のアドレスを入れる
+			//	g_Parts[腕].parent= &g_Player[i];		// 腕だったら親は本体（プレイヤー）
+			//	g_Parts[手].parent= &g_Paerts[腕];	// 指が腕の子供だった場合の例
+
+				// 階層アニメーション用のメンバー変数の初期化
+			for (int j = 0; j < PLAYER_ANIM_MAX; j++)
+			{
+				g_Parts[i][j].time[j] = 0.0f;			// 線形補間用のタイマーをクリア
+				g_Parts[i][j].tblNo[j] = 0;			// 再生する行動データテーブルNoをセット
+				g_Parts[i][j].tblMax[j] = 0;			// 再生する行動データテーブルのレコード数をセット
+			}
+			// パーツの読み込みはまだしていない
+			g_Parts[i][j].load = FALSE;
+
+
+			// パーツの初期アニメーションを設定
+			g_Parts[i][j].animNum = PLAYER_ANIM_STOP;
+		}
+
+		g_Parts[i][PLAYER_PARTS_HEAD].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_HEAD].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HEAD].load = 1;
+		LoadModel(MODEL_PLAYER_HEAD, &g_Parts[i][PLAYER_PARTS_HEAD].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_HEAD].model, &g_Parts[i][PLAYER_PARTS_HEAD].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_ARM_L].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_ARM_L].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_L].load = 1;
+		LoadModel(MODEL_PLAYER_ARM_L, &g_Parts[i][PLAYER_PARTS_ARM_L].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_ARM_L].model, &g_Parts[i][PLAYER_PARTS_ARM_L].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_ARM_R].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_ARM_R].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_ARM_R].load = 1;
+		LoadModel(MODEL_PLAYER_ARM_R, &g_Parts[i][PLAYER_PARTS_ARM_R].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_ARM_R].model, &g_Parts[i][PLAYER_PARTS_ARM_R].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_HAND_L].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_HAND_L].parent = &g_Parts[i][PLAYER_PARTS_ARM_L];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_L].load = 1;
+		LoadModel(MODEL_PLAYER_HAND_L, &g_Parts[i][PLAYER_PARTS_HAND_L].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_HAND_L].model, &g_Parts[i][PLAYER_PARTS_HAND_L].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_HAND_R].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_HAND_R].parent = &g_Parts[i][PLAYER_PARTS_ARM_R];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_HAND_R].load = 1;
+		LoadModel(MODEL_PLAYER_HAND_R, &g_Parts[i][PLAYER_PARTS_HAND_R].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_HAND_R].model, &g_Parts[i][PLAYER_PARTS_HAND_R].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_LEG_L].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_LEG_L].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_L].load = 1;
+		LoadModel(MODEL_PLAYER_LEG_L, &g_Parts[i][PLAYER_PARTS_LEG_L].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_LEG_L].model, &g_Parts[i][PLAYER_PARTS_LEG_L].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_LEG_R].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_LEG_R].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_LEG_R].load = 1;
+		LoadModel(MODEL_PLAYER_LEG_R, &g_Parts[i][PLAYER_PARTS_LEG_R].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_LEG_R].model, &g_Parts[i][PLAYER_PARTS_LEG_R].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_FOOT_L].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_FOOT_L].parent = &g_Parts[i][PLAYER_PARTS_LEG_L];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_L].load = 1;
+		LoadModel(MODEL_PLAYER_FOOT_L, &g_Parts[i][PLAYER_PARTS_FOOT_L].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_FOOT_L].model, &g_Parts[i][PLAYER_PARTS_FOOT_L].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_FOOT_R].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_FOOT_R].parent = &g_Parts[i][PLAYER_PARTS_LEG_R];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_FOOT_R].load = 1;
+		LoadModel(MODEL_PLAYER_FOOT_R, &g_Parts[i][PLAYER_PARTS_FOOT_R].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_FOOT_R].model, &g_Parts[i][PLAYER_PARTS_FOOT_R].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_SWORD_R].use = FALSE;
+		g_Parts[i][PLAYER_PARTS_SWORD_R].parent = &g_Parts[i][PLAYER_PARTS_HAND_R];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_R].load = 1;
+		LoadModel(MODEL_PLAYER_SWORD_R, &g_Parts[i][PLAYER_PARTS_SWORD_R].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_SWORD_R].model, &g_Parts[i][PLAYER_PARTS_SWORD_R].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_SWORD_B].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_SWORD_B].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SWORD_B].load = 1;
+		LoadModel(MODEL_PLAYER_SWORD_B, &g_Parts[i][PLAYER_PARTS_SWORD_B].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_SWORD_B].model, &g_Parts[i][PLAYER_PARTS_SWORD_B].diffuse[0]);
+
+		g_Parts[i][PLAYER_PARTS_SCABBARD].use = TRUE;
+		g_Parts[i][PLAYER_PARTS_SCABBARD].parent = &g_Player[i];	// 親をセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
+		g_Parts[i][PLAYER_PARTS_SCABBARD].load = 1;
+		LoadModel(MODEL_PLAYER_SCABBARD, &g_Parts[i][PLAYER_PARTS_SCABBARD].model);
+		// モデルのディフューズを保存しておく。色変え対応の為。
+		GetModelDiffuse(&g_Parts[i][PLAYER_PARTS_SCABBARD].model, &g_Parts[i][PLAYER_PARTS_SCABBARD].diffuse[0]);
+
+		// 最初からパーツをくっつけておく
+		for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+		{
+			g_Parts[i][j].Animation(PLAYER_ANIM_STOP);
+		}
+
+		// クォータニオンの初期化
+		XMStoreFloat4(&g_Player[i].Quaternion, XMQuaternionIdentity());
+
 		for (int j = 0; j < PLAYER_ANIM_MAX; j++)
 		{
-			g_Parts[i].time[j] = 0.0f;			// 線形補間用のタイマーをクリア
-			g_Parts[i].tblNo[j] = 0;			// 再生する行動データテーブルNoをセット
-			g_Parts[i].tblMax[j] = 0;			// 再生する行動データテーブルのレコード数をセット
+			g_AnimTransFrameCnt[j] = 0.0f;
 		}
-		// パーツの読み込みはまだしていない
-		g_Parts[i].load = FALSE;
-
-
-		// パーツの初期アニメーションを設定
-		g_Parts[i].animNum = PLAYER_ANIM_STOP;
 	}
-
-	g_Parts[PLAYER_PARTS_HEAD].use = TRUE;
-	g_Parts[PLAYER_PARTS_HEAD].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HEAD].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HEAD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HEAD].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_head) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HEAD].load = 1;
-	LoadModel(MODEL_PLAYER_HEAD, &g_Parts[PLAYER_PARTS_HEAD].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_HEAD].model, &g_Parts[PLAYER_PARTS_HEAD].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_ARM_L].use = TRUE;
-	g_Parts[PLAYER_PARTS_ARM_L].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_ARM_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_arm_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_L].load = 1;
-	LoadModel(MODEL_PLAYER_ARM_L, &g_Parts[PLAYER_PARTS_ARM_L].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_ARM_L].model, &g_Parts[PLAYER_PARTS_ARM_L].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_ARM_R].use = TRUE;
-	g_Parts[PLAYER_PARTS_ARM_R].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_ARM_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_ARM_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_arm_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_ARM_R].load = 1;
-	LoadModel(MODEL_PLAYER_ARM_R, &g_Parts[PLAYER_PARTS_ARM_R].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_ARM_R].model, &g_Parts[PLAYER_PARTS_ARM_R].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_HAND_L].use = TRUE;
-	g_Parts[PLAYER_PARTS_HAND_L].parent = &g_Parts[PLAYER_PARTS_ARM_L];	// 親をセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HAND_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_hand_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_L].load = 1;
-	LoadModel(MODEL_PLAYER_HAND_L, &g_Parts[PLAYER_PARTS_HAND_L].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_HAND_L].model, &g_Parts[PLAYER_PARTS_HAND_L].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_HAND_R].use = TRUE;
-	g_Parts[PLAYER_PARTS_HAND_R].parent = &g_Parts[PLAYER_PARTS_ARM_R];	// 親をセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_HAND_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_HAND_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_hand_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_HAND_R].load = 1;
-	LoadModel(MODEL_PLAYER_HAND_R, &g_Parts[PLAYER_PARTS_HAND_R].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_HAND_R].model, &g_Parts[PLAYER_PARTS_HAND_R].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_LEG_L].use = TRUE;
-	g_Parts[PLAYER_PARTS_LEG_L].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_LEG_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_leg_l) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_L].load = 1;
-	LoadModel(MODEL_PLAYER_LEG_L, &g_Parts[PLAYER_PARTS_LEG_L].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_LEG_L].model, &g_Parts[PLAYER_PARTS_LEG_L].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_LEG_R].use = TRUE;
-	g_Parts[PLAYER_PARTS_LEG_R].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_LEG_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_LEG_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_leg_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_LEG_R].load = 1;
-	LoadModel(MODEL_PLAYER_LEG_R, &g_Parts[PLAYER_PARTS_LEG_R].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_LEG_R].model, &g_Parts[PLAYER_PARTS_LEG_R].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_FOOT_L].use = TRUE;
-	g_Parts[PLAYER_PARTS_FOOT_L].parent = &g_Parts[PLAYER_PARTS_LEG_L];	// 親をセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_FOOT_L;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_L].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_L].load = 1;
-	LoadModel(MODEL_PLAYER_FOOT_L, &g_Parts[PLAYER_PARTS_FOOT_L].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_FOOT_L].model, &g_Parts[PLAYER_PARTS_FOOT_L].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_FOOT_R].use = TRUE;
-	g_Parts[PLAYER_PARTS_FOOT_R].parent = &g_Parts[PLAYER_PARTS_LEG_R];	// 親をセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_FOOT_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_FOOT_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_foot_r) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_FOOT_R].load = 1;
-	LoadModel(MODEL_PLAYER_FOOT_R, &g_Parts[PLAYER_PARTS_FOOT_R].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_FOOT_R].model, &g_Parts[PLAYER_PARTS_FOOT_R].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_SWORD_R].use = FALSE;
-	g_Parts[PLAYER_PARTS_SWORD_R].parent = &g_Parts[PLAYER_PARTS_HAND_R];	// 親をセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SWORD_R;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_R].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_sword_r) / sizeof(INTERPOLATION_DATA);	// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_R].load = 1;
-	LoadModel(MODEL_PLAYER_SWORD_R, &g_Parts[PLAYER_PARTS_SWORD_R].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_SWORD_R].model, &g_Parts[PLAYER_PARTS_SWORD_R].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_SWORD_B].use = TRUE;
-	g_Parts[PLAYER_PARTS_SWORD_B].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SWORD_B;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SWORD_B].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_sword_b) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SWORD_B].load = 1;
-	LoadModel(MODEL_PLAYER_SWORD_B, &g_Parts[PLAYER_PARTS_SWORD_B].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_SWORD_B].model, &g_Parts[PLAYER_PARTS_SWORD_B].diffuse[0]);
-
-	g_Parts[PLAYER_PARTS_SCABBARD].use = TRUE;
-	g_Parts[PLAYER_PARTS_SCABBARD].parent = &g_Player;	// 親をセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_STOP] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_STOP] = sizeof(stop_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_MOVE] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_MOVE] = sizeof(move_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_DASH] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_DASH] = sizeof(dash_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_JUMP] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_JUMP] = sizeof(jump_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblNo[PLAYER_ANIM_ATTACK] = PLAYER_PARTS_SCABBARD;			// 再生するアニメデータの先頭アドレスをセット
-	g_Parts[PLAYER_PARTS_SCABBARD].tblMax[PLAYER_ANIM_ATTACK] = sizeof(attack_tbl_scabbard) / sizeof(INTERPOLATION_DATA);		// 再生するアニメデータのレコード数をセット
-	g_Parts[PLAYER_PARTS_SCABBARD].load = 1;
-	LoadModel(MODEL_PLAYER_SCABBARD, &g_Parts[PLAYER_PARTS_SCABBARD].model);
-	// モデルのディフューズを保存しておく。色変え対応の為。
-	GetModelDiffuse(&g_Parts[PLAYER_PARTS_SCABBARD].model, &g_Parts[PLAYER_PARTS_SCABBARD].diffuse[0]);
-
-	// 最初からパーツをくっつけておく
-	for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-	{
-		g_Parts[i].Animation(PLAYER_ANIM_STOP);
-	}
-
-	// クォータニオンの初期化
-	XMStoreFloat4(&g_Player.Quaternion, XMQuaternionIdentity());
-
-	for (int i = 0; i < PLAYER_ANIM_MAX; i++)
-	{
-		g_AnimTransFrameCnt[i] = 0.0f;
-	}
-
 	return S_OK;
 }
 
@@ -855,26 +865,26 @@ HRESULT InitPlayer(void)
 //=============================================================================
 void UninitPlayer(void)
 {
-	// モデルの解放処理
-	if (g_Player.load == TRUE)
+	for (int i = 0; i < PLAYER_MAX; i++)
 	{
-		UnloadModel(&g_Player.model);
-		g_Player.load = FALSE;
-	}
-
-	// パーツの解放処理
-	for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-	{
-		if (g_Parts[i].load == TRUE)
+		// モデルの解放処理
+		if (g_Player[i].load == TRUE)
 		{
-			// パーツの解放処理
-			UnloadModel(&g_Parts[i].model);
-			g_Parts[i].load = FALSE;
+			UnloadModel(&g_Player[i].model);
+			g_Player[i].load = FALSE;
+		}
+
+		// パーツの解放処理
+		for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+		{
+			if (g_Parts[i][j].load == TRUE)
+			{
+				// パーツの解放処理
+				UnloadModel(&g_Parts[i][j].model);
+				g_Parts[i][j].load = FALSE;
+			}
 		}
 	}
-
-
-
 }
 
 //=============================================================================
@@ -882,429 +892,465 @@ void UninitPlayer(void)
 //=============================================================================
 void UpdatePlayer(void)
 {
-	if (g_Player.use == TRUE && GetFade() == FADE_NONE)
+	if (GetMode() == MODE_TITLE)
 	{
-		// 無敵時間は色替えをする
-		if (g_Player.colCnt > 0)
-		{
-			// 白く光らせる
-			if (g_Player.colCnt % BARRIER_WHITE == 0)
-			{
-				for (int i = 0; i < g_Player.model.SubsetNum; i++)
-				{
-					SetModelDiffuse(&g_Player.model, i, XMFLOAT4(10.0f, 10.0f, 10.0f, 1.0f));
-				}
-
-				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-				{
-					for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
-					{
-						SetModelDiffuse(&g_Parts[i].model, j, XMFLOAT4(10.0f, 10.0f, 10.0f, 1.0f));
-					}
-				}
-			}
-
-			// 元の色
-			else
-			{
-				for (int i = 0; i < g_Player.model.SubsetNum; i++)
-				{
-					SetModelDiffuse(&g_Player.model, i, g_Player.diffuse[i]);
-				}
-
-				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-				{
-					for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
-					{
-						SetModelDiffuse(&g_Parts[i].model, j, g_Parts[i].diffuse[j]);
-					}
-				}
-			}
-
-			g_Player.colCnt++;
-			if (g_Player.colCnt > BARRIER_FRAME)
-			{
-				// 無敵時間終了時に元の色に戻す
-				g_Player.colCnt = 0;
-				for (int i = 0; i < g_Player.model.SubsetNum; i++)
-				{
-					SetModelDiffuse(&g_Player.model, i, g_Player.diffuse[i]);
-				}
-
-				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-				{
-					for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
-					{
-						SetModelDiffuse(&g_Parts[i].model, j, g_Parts[i].diffuse[j]);
-					}
-				}
-			}
-		}
-
-		CAMERA* cam = GetCamera();
-
-		g_Player.spd *= 0.4f;
-
-		// アニメーションを待機モーションにリセット
-		int animNum = PLAYER_ANIM_STOP;
-
-		// 移動処理
-		if (GetKeyboardPress(DIK_LEFT))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.x -= g_Player.spd;
-			roty = XM_PI / 2;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-		if (GetKeyboardPress(DIK_RIGHT))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.x += g_Player.spd;
-			roty = -XM_PI / 2;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-
-		if (GetKeyboardPress(DIK_UP))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.z += g_Player.spd;
-			roty = XM_PI;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-		if (GetKeyboardPress(DIK_DOWN))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.z -= g_Player.spd;
-			roty = 0.0f;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-
-		// ゲームパット操作
-		if (IsButtonPressed(0, BUTTON_LEFT))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.x -= g_Player.spd;
-			roty = XM_PI / 2;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-		if (IsButtonPressed(0, BUTTON_RIGHT))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.x += g_Player.spd;
-			roty = -XM_PI / 2;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-
-		if (IsButtonPressed(0, BUTTON_UP))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.z += g_Player.spd;
-			roty = XM_PI;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-		if (IsButtonPressed(0, BUTTON_DOWN))
-		{
-			g_Player.spd = VALUE_MOVE;
-			//g_Player.pos.z -= g_Player.spd;
-			roty = 0.0f;
-			animNum = PLAYER_ANIM_MOVE;
-		}
-
-		// ダッシュ処理
-		if (GetKeyboardPress(DIK_LSHIFT) || IsButtonPressed(0, BUTTON_X))
-		{
-			g_Player.spd *= VALUE_DASH;
-
-			// 移動キーを押している間はダッシュアニメーションをセット
-			if (g_Player.spd >= VALUE_MOVE * VALUE_DASH)
-			{
-				animNum = PLAYER_ANIM_DASH;
-			}
-		}
-
-		// 設定画面を開く
-		if (GetKeyboardTrigger(DIK_P))
-		{
-			SetSettingFlag();
-		}
-
-		else if (IsButtonTriggered(0, BUTTON_SELECT))
-		{
-			SetSettingFlag();
-		}
-
-#ifdef _DEBUG
-		if (GetKeyboardPress(DIK_R))
-		{
-			g_Player.pos.z = g_Player.pos.x = 0.0f;
-			g_Player.spd = 0.0f;
-			roty = 0.0f;
-		}
-
-		if (GetKeyboardPress(DIK_J))
-		{
-			g_Player.pos.y += g_Player.pos.x = 0.0f;
-			g_Player.spd = 0.0f;
-			roty = 0.0f;
-		}
-#endif
-
-		{	// 押した方向にプレイヤーを移動させる
-			// 押した方向にプレイヤーを向かせている所
-			g_Player.rot.y = roty + cam->rot.y;
-
-			g_Player.pos.x -= sinf(g_Player.rot.y) * g_Player.spd;
-			g_Player.pos.z -= cosf(g_Player.rot.y) * g_Player.spd;
-		}
-
-		// レイキャストして足元の高さを求める
-		XMFLOAT3 HitPosition;		// 交点
-		XMFLOAT3 Normal;			// ぶつかったポリゴンの法線ベクトル（向き）
-		BOOL ans = RayHitField(g_Player.pos, &HitPosition, &Normal);
-		if (ans)
-		{
-			g_Player.pos.y = HitPosition.y + PLAYER_OFFSET_Y;
-		}
-		else
-		{
-			g_Player.pos.y = PLAYER_OFFSET_Y;
-			Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		}
-
-		//壁の座標を超えないようにする
-		if (g_Player.pos.x > MAP_RIGHT - g_Player.size * 0.5f)
-		{
-			g_Player.pos.x = MAP_RIGHT - g_Player.size * 0.5f;
-		}
-		if (g_Player.pos.x < MAP_LEFT + g_Player.size * 0.5f)
-		{
-			g_Player.pos.x = MAP_LEFT + g_Player.size * 0.5f;
-		}
-		if (g_Player.pos.z > MAP_TOP - g_Player.size * 0.5f)
-		{
-			g_Player.pos.z = MAP_TOP - g_Player.size * 0.5f;
-		}
-		if (g_Player.pos.z < MAP_DOWN + g_Player.size * 0.5f)
-		{
-			g_Player.pos.z = MAP_DOWN + g_Player.size * 0.5f;
-		}
-
-		
-		// 弾発射処理
-		//if (GetKeyboardTrigger(DIK_SPACE))
-		//{
-		//	SetBullet(g_Player.pos, g_Player.rot);
-		//}
-
-		// 影もプレイヤーの位置に合わせる
-		//XMFLOAT3 pos = g_Player.pos;
-		//pos.y -= (PLAYER_OFFSET_Y - 0.1f);
-		//SetPositionShadow(g_Player.shadowIdx, pos);
-
-		// ジャンプ処理中
-		//if (g_Player.jump == TRUE)
-		//{
-		//	float angle = (XM_PI / PLAYER_JUMP_CNT_MAX) * g_Player.jumpCnt;
-		//	float y = PLAYER_JUMP_Y * cosf(XM_PI / 2 + angle);
-		//	//g_Player.pos.y -= y;
-
-		//	g_Player.jumpCnt++;
-		//	if (g_Player.jumpCnt > PLAYER_JUMP_CNT_MAX)
-		//	{
-		//		g_Player.jump = FALSE;
-		//		g_Player.jumpCnt = 0;
-		//		g_AnimTransFrameCnt[PLAYER_ANIM_JUMP] = 0.0f;
-		//		for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-		//		{
-		//			g_Parts[i].time[PLAYER_ANIM_JUMP] = 0.0f;
-		//		}
-		//	}
-
-		//}
-		//// ジャンプボタン押した？
-		//else if ((g_Player.jump == FALSE) && (GetKeyboardTrigger(DIK_X)))
-		//{
-		//	g_Player.jump = TRUE;
-		//	g_Player.jumpCnt = 0;
-		//}
-
-		ENEMY* enemy = GetEnemy();
-		ENEMY* boss = GetBoss();
-		// アタック処理中
-		if (g_Player.attack == TRUE)
-		{
-			// アタックアニメーションをセット
-			animNum = PLAYER_ANIM_ATTACK;
-			g_Player.atkCnt++;
-			// 剣を抜いたように見えるときだけ手に持つようにセット
-			if ((int)g_Parts[PLAYER_PARTS_ARM_R].time[PLAYER_ANIM_ATTACK] < 1)
-			{
-				g_Parts[PLAYER_PARTS_SWORD_R].use = FALSE;
-				g_Parts[PLAYER_PARTS_SWORD_B].use = TRUE;
-			}
-
-			else
-			{
-				g_Parts[PLAYER_PARTS_SWORD_R].use = TRUE;
-				g_Parts[PLAYER_PARTS_SWORD_B].use = FALSE;
-				XMFLOAT3 pos = g_Player.pos;
-
-				pos.x -= (float)sinf(g_Player.rot.y) * ATTACK_DEPTH * 0.5f;
-				pos.z -= (float)cosf(g_Player.rot.y) * ATTACK_DEPTH * 0.5f;
-
-				for (int i = 0; i < ENEMY_MAX; i++)
-				{
-					// 生きているエネミーのみ判定
-					if (enemy[i].use == TRUE && enemy[i].colCnt == 0)
-					{
-						if (CollisionBC(pos, enemy[i].pos, ATTACK_DEPTH, enemy[i].size))
-						{
-							g_Player.gauge += enemy[i].DecHP(g_Player.atkVal);
-						}
-					}
-				}
-
-				for (int i = 0; i < BOSS_MAX; i++)
-				{
-					if (boss[i].use == TRUE && boss[i].colCnt == 0)
-					{
-						if (CollisionBC(pos, boss[i].pos, ATTACK_DEPTH, boss[i].size))
-						{
-							boss[i].DecHP(g_Player.atkVal + g_Player.gauge);
-						}
-					}
-				}
-			}
-
-			if (g_Player.atkCnt >= PLAYER_ATK_CNT_MAX)
-			{
-				g_Player.attack = FALSE;
-				g_Player.atkCnt = 0;
-				g_AnimTransFrameCnt[PLAYER_ANIM_ATTACK] = 0.0f;
-
-				for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-				{
-					g_Parts[i].time[PLAYER_ANIM_ATTACK] = 0.0f;
-					g_Parts[PLAYER_PARTS_SWORD_R].use = FALSE;
-					g_Parts[PLAYER_PARTS_SWORD_B].use = TRUE;
-				}
-			}
-		}
-		// アタックボタン押した？
-		else if ((g_Player.attack == FALSE) && (GetKeyboardTrigger(DIK_SPACE)))
-		{
-			g_Player.attack = TRUE;
-			g_Player.atkCnt = 0;
-			animNum = PLAYER_ANIM_ATTACK;
-			PlaySound(SOUND_LABEL_SE_slash);
-		}
-
-		else if ((g_Player.attack == FALSE) && (IsButtonTriggered(0, BUTTON_A)))
-		{
-			g_Player.attack = TRUE;
-			g_Player.atkCnt = 0;
-			animNum = PLAYER_ANIM_ATTACK;
-			PlaySound(SOUND_LABEL_SE_slash);
-		}
-
 		// 階層アニメーション
 		for (int i = 0; i < PLAYER_PARTS_MAX; i++)
 		{
 			// 使われているなら処理する
 			// 線形補間の処理
-			if (g_Player.jump == TRUE)
+			g_Parts[0][i].Animation(PLAYER_ANIM_MOVE);
+		}
+	}
+
+	else
+	{
+
+		for (int i = 0; i < PLAYER_MAX; i++)
+		{
+
+
+			if (g_Player[i].use == TRUE && GetFade() == FADE_NONE)
 			{
-				// アタックアニメーションを優先
-				if (g_Player.attack == TRUE)
+				// 無敵時間は色替えをする
+				if (g_Player[i].colCnt > 0)
 				{
-					g_Parts[i].Animation(animNum, PLAYER_ANIM_JUMP);
+					// 白く光らせる
+					if (g_Player[i].colCnt % BARRIER_WHITE == 0)
+					{
+						for (int j = 0; j < g_Player[i].model.SubsetNum; j++)
+						{
+							SetModelDiffuse(&g_Player[i].model, j, XMFLOAT4(10.0f, 10.0f, 10.0f, 1.0f));
+						}
+
+						for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+						{
+							for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+							{
+								SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(10.0f, 10.0f, 10.0f, 1.0f));
+							}
+						}
+					}
+
+					// 元の色
+					else
+					{
+						for (int j = 0; j < g_Player[i].model.SubsetNum; j++)
+						{
+							SetModelDiffuse(&g_Player[i].model, j, g_Player[i].diffuse[j]);
+						}
+
+						for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+						{
+							for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+							{
+								SetModelDiffuse(&g_Parts[i][j].model, k, g_Parts[i][j].diffuse[k]);
+							}
+						}
+					}
+
+					g_Player[i].colCnt++;
+					if (g_Player[i].colCnt > BARRIER_FRAME)
+					{
+						// 無敵時間終了時に元の色に戻す
+						g_Player[i].colCnt = 0;
+						for (int j = 0; j < g_Player[i].model.SubsetNum; j++)
+						{
+							SetModelDiffuse(&g_Player[i].model, j, g_Player[i].diffuse[i]);
+						}
+
+						for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+						{
+							for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+							{
+								SetModelDiffuse(&g_Parts[i][j].model, k, g_Parts[i][j].diffuse[k]);
+							}
+						}
+					}
 				}
 
+				CAMERA* cam = GetCamera();
+
+				g_Player[i].spd *= 0.4f;
+
+				// アニメーションを待機モーションにリセット
+				int animNum = PLAYER_ANIM_STOP;
+
+				// 移動処理
+				if (GetKeyboardPress(DIK_LEFT))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.x -= g_Player[i].spd;
+					roty = XM_PI / 2;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+				if (GetKeyboardPress(DIK_RIGHT))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.x += g_Player[i].spd;
+					roty = -XM_PI / 2;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+
+				if (GetKeyboardPress(DIK_UP))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.z += g_Player[i].spd;
+					roty = XM_PI;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+				if (GetKeyboardPress(DIK_DOWN))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.z -= g_Player[i].spd;
+					roty = 0.0f;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+
+				// ゲームパット操作
+				if (IsButtonPressed(0, BUTTON_LEFT))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.x -= g_Player[i].spd;
+					roty = XM_PI / 2;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+				if (IsButtonPressed(0, BUTTON_RIGHT))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.x += g_Player[i].spd;
+					roty = -XM_PI / 2;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+
+				if (IsButtonPressed(0, BUTTON_UP))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.z += g_Player[i].spd;
+					roty = XM_PI;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+				if (IsButtonPressed(0, BUTTON_DOWN))
+				{
+					g_Player[i].spd = VALUE_MOVE;
+					//g_Player[i].pos.z -= g_Player[i].spd;
+					roty = 0.0f;
+					animNum = PLAYER_ANIM_MOVE;
+				}
+
+				// ダッシュ処理
+				if (GetKeyboardPress(DIK_LSHIFT) || IsButtonPressed(0, BUTTON_X))
+				{
+					g_Player[i].spd *= VALUE_DASH;
+
+					// 移動キーを押している間はダッシュアニメーションをセット
+					if (g_Player[i].spd >= VALUE_MOVE * VALUE_DASH)
+					{
+						animNum = PLAYER_ANIM_DASH;
+					}
+				}
+
+				// 設定画面を開く
+				if (GetKeyboardTrigger(DIK_P))
+				{
+					SetSettingFlag();
+				}
+
+				else if (IsButtonTriggered(0, BUTTON_SELECT))
+				{
+					SetSettingFlag();
+				}
+
+#ifdef _DEBUG
+				if (GetKeyboardPress(DIK_R))
+				{
+					g_Player[i].pos.z = g_Player[i].pos.x = 0.0f;
+					g_Player[i].spd = 0.0f;
+					roty = 0.0f;
+				}
+
+				//if (GetKeyboardPress(DIK_J))
+				//{
+				//	g_Player[i].pos.y += g_Player[i].pos.x = 0.0f;
+				//	g_Player[i].spd = 0.0f;
+				//	roty = 0.0f;
+				//}
+#endif
+
+				{	// 押した方向にプレイヤーを移動させる
+					// 押した方向にプレイヤーを向かせている所
+					g_Player[i].rot.y = roty + cam->rot.y;
+
+					g_Player[i].pos.x -= sinf(g_Player[i].rot.y) * g_Player[i].spd;
+					g_Player[i].pos.z -= cosf(g_Player[i].rot.y) * g_Player[i].spd;
+				}
+
+				// レイキャストして足元の高さを求める
+				XMFLOAT3 HitPosition;		// 交点
+				XMFLOAT3 Normal;			// ぶつかったポリゴンの法線ベクトル（向き）
+				BOOL ans = RayHitField(g_Player[i].pos, &HitPosition, &Normal);
+				if (ans)
+				{
+					g_Player[i].pos.y = HitPosition.y + PLAYER_OFFSET_Y;
+				}
 				else
 				{
-					g_Parts[i].Animation(PLAYER_ANIM_JUMP, animNum);
+					g_Player[i].pos.y = PLAYER_OFFSET_Y;
+					Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
 				}
-			}
 
-			else
-			{
-				g_Parts[i].Animation(animNum, g_Parts[i].animNum);
-			}
-		}
-
-		// ポイントライトのテスト
-		{
-			LIGHT* light = GetLightData(1);
-			XMFLOAT3 pos = g_Player.pos;
-			pos.y += 100.0f;
-
-			light->Position = pos;
-			light->Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-			light->Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-			light->Type = LIGHT_TYPE_POINT;
-			light->Enable = TRUE;
-			SetLightData(1, light);
-		}
+				//壁の座標を超えないようにする
+				if (g_Player[i].pos.x > MAP_RIGHT - g_Player[i].size * 0.5f)
+				{
+					g_Player[i].pos.x = MAP_RIGHT - g_Player[i].size * 0.5f;
+				}
+				if (g_Player[i].pos.x < MAP_LEFT + g_Player[i].size * 0.5f)
+				{
+					g_Player[i].pos.x = MAP_LEFT + g_Player[i].size * 0.5f;
+				}
+				if (g_Player[i].pos.z > MAP_TOP - g_Player[i].size * 0.5f)
+				{
+					g_Player[i].pos.z = MAP_TOP - g_Player[i].size * 0.5f;
+				}
+				if (g_Player[i].pos.z < MAP_DOWN + g_Player[i].size * 0.5f)
+				{
+					g_Player[i].pos.z = MAP_DOWN + g_Player[i].size * 0.5f;
+				}
 
 
+				// 弾発射処理
+				//if (GetKeyboardTrigger(DIK_SPACE))
+				//{
+				//	SetBullet(g_Player[i].pos, g_Player[i].rot);
+				//}
 
-		//////////////////////////////////////////////////////////////////////
-		// 姿勢制御
-		//////////////////////////////////////////////////////////////////////
+				// 影もプレイヤーの位置に合わせる
+				//XMFLOAT3 pos = g_Player[i].pos;
+				//pos.y -= (PLAYER_OFFSET_Y - 0.1f);
+				//SetPositionShadow(g_Player[i].shadowIdx, pos);
 
-		XMVECTOR vx, nvx, up;
-		XMVECTOR quat;
-		float len, angle;
+				// ジャンプ処理中
+				if (g_Player[i].jump == TRUE)
+				{
+					float angle = (XM_PI / PLAYER_JUMP_CNT_MAX) * g_Player[i].jumpCnt;
+					float y = PLAYER_JUMP_Y * cosf(XM_PI / 2 + angle);
+					//g_Player[i].pos.y -= y;
+
+					g_Player[i].jumpCnt++;
+					if (g_Player[i].jumpCnt > PLAYER_JUMP_CNT_MAX)
+					{
+						g_Player[i].jump = FALSE;
+						g_Player[i].jumpCnt = 0;
+						g_AnimTransFrameCnt[PLAYER_ANIM_JUMP] = 0.0f;
+						for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+						{
+							g_Parts[i][j].time[PLAYER_ANIM_JUMP] = 0.0f;
+						}
+					}
+
+				}
+				// ジャンプボタン押した？
+				else if ((g_Player[i].jump == FALSE) && (GetKeyboardPress(DIK_X)))
+				{
+					g_Player[i].jump = TRUE;
+					g_Player[i].jumpCnt = 0;
+				}
+
+				ENEMY* enemy = GetEnemy();
+				ENEMY* boss = GetBoss();
+				// アタック処理中
+				if (g_Player[i].attack == TRUE)
+				{
+					// アタックアニメーションをセット
+					animNum = PLAYER_ANIM_ATTACK;
+					g_Player[i].atkCnt++;
+					// 剣を抜いたように見えるときだけ手に持つようにセット
+					if ((int)g_Parts[i][PLAYER_PARTS_ARM_R].time[PLAYER_ANIM_ATTACK] < 1)
+					{
+						g_Parts[i][PLAYER_PARTS_SWORD_R].use = FALSE;
+						g_Parts[i][PLAYER_PARTS_SWORD_B].use = TRUE;
+					}
+
+					else
+					{
+						g_Parts[i][PLAYER_PARTS_SWORD_R].use = TRUE;
+						g_Parts[i][PLAYER_PARTS_SWORD_B].use = FALSE;
+						XMFLOAT3 pos = g_Player[i].pos;
+
+						pos.x -= (float)sinf(g_Player[i].rot.y) * ATTACK_DEPTH * 0.5f;
+						pos.z -= (float)cosf(g_Player[i].rot.y) * ATTACK_DEPTH * 0.5f;
+
+						for (int j = 0; j < ENEMY_MAX; j++)
+						{
+							// 生きているエネミーのみ判定
+							if (enemy[j].use == TRUE && enemy[j].colCnt == 0)
+							{
+								if (CollisionBC(pos, enemy[j].pos, ATTACK_DEPTH, enemy[j].size))
+								{
+									g_Player[i].gauge += enemy[j].DecHP(g_Player[i].atkVal);
+								}
+							}
+						}
+
+						for (int j = 0; j < BOSS_MAX; j++)
+						{
+							if (boss[j].use == TRUE && boss[j].colCnt == 0)
+							{
+								if (CollisionBC(pos, boss[j].pos, ATTACK_DEPTH, boss[j].size))
+								{
+									boss[j].DecHP(g_Player[i].atkVal + g_Player[i].gauge);
+								}
+							}
+						}
+					}
+
+					if (g_Player[i].atkCnt >= PLAYER_ATK_CNT_MAX)
+					{
+						g_Player[i].attack = FALSE;
+						g_Player[i].atkCnt = 0;
+						g_AnimTransFrameCnt[PLAYER_ANIM_ATTACK] = 0.0f;
+
+						for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+						{
+							g_Parts[i][j].time[PLAYER_ANIM_ATTACK] = 0.0f;
+							g_Parts[i][PLAYER_PARTS_SWORD_R].use = FALSE;
+							g_Parts[i][PLAYER_PARTS_SWORD_B].use = TRUE;
+						}
+					}
+				}
+				// アタックボタン押した？
+				else if ((g_Player[i].attack == FALSE) && (GetKeyboardTrigger(DIK_SPACE)))
+				{
+					g_Player[i].attack = TRUE;
+					g_Player[i].atkCnt = 0;
+					animNum = PLAYER_ANIM_ATTACK;
+					PlaySound(SOUND_LABEL_SE_slash);
+				}
+
+				else if ((g_Player[i].attack == FALSE) && (IsButtonTriggered(0, BUTTON_A)))
+				{
+					g_Player[i].attack = TRUE;
+					g_Player[i].atkCnt = 0;
+					animNum = PLAYER_ANIM_ATTACK;
+					PlaySound(SOUND_LABEL_SE_slash);
+				}
+
+				// 階層アニメーション
+				for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+				{
+					if (i == 0)
+					{
+						// 使われているなら処理する
+						// 線形補間の処理
+						if (g_Player[i].jump == TRUE)
+						{
+							// アタックアニメーションを優先
+							if (g_Player[i].attack == TRUE)
+							{
+								g_Parts[i][j].Animation(animNum, PLAYER_ANIM_JUMP);
+							}
+
+							else
+							{
+								g_Parts[i][j].Animation(PLAYER_ANIM_JUMP, animNum);
+							}
+						}
+
+						else
+						{
+							g_Parts[i][j].Animation(animNum, g_Parts[i][j].animNum);
+						}
+					}
+					else
+					{
+						if (animNum != g_Parts[i][j].animNum)
+						{
+							g_Parts[i][j].time[animNum] = 0;
+							g_Parts[i][j].animNum = animNum;
+						}
+						if (g_Player[i].jump == TRUE)
+						{
+							animNum = PLAYER_ANIM_JUMP;
+						}
+						g_Parts[i][j].Animation(animNum);
+					}
+				}
+
+				// ポイントライトのテスト
+				{
+					LIGHT* light = GetLightData(1);
+					XMFLOAT3 pos = g_Player[i].pos;
+					pos.y += 100.0f;
+
+					light->Position = pos;
+					light->Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+					light->Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+					light->Type = LIGHT_TYPE_POINT;
+					light->Enable = TRUE;
+					SetLightData(1, light);
+				}
 
 
-		g_Player.UpVector = Normal;
-		up = { 0.0f, 1.0f, 0.0f, 0.0f };
-		vx = XMVector3Cross(up, XMLoadFloat3(&g_Player.UpVector));
 
-		nvx = XMVector3Length(vx);
-		XMStoreFloat(&len, nvx);
-		nvx = XMVector3Normalize(vx);
-		//nvx = vx / len;
-		angle = asinf(len);
+				//////////////////////////////////////////////////////////////////////
+				// 姿勢制御
+				//////////////////////////////////////////////////////////////////////
 
-		//quat = XMQuaternionIdentity();
-
-	//	quat = XMQuaternionRotationAxis(nvx, angle);
-		quat = XMQuaternionRotationNormal(nvx, angle);
+				XMVECTOR vx, nvx, up;
+				XMVECTOR quat;
+				float len, angle;
 
 
-		quat = XMQuaternionSlerp(XMLoadFloat4(&g_Player.Quaternion), quat, 0.05f);
-		XMStoreFloat4(&g_Player.Quaternion, quat);
+				g_Player[i].UpVector = Normal;
+				up = { 0.0f, 1.0f, 0.0f, 0.0f };
+				vx = XMVector3Cross(up, XMLoadFloat3(&g_Player[i].UpVector));
+
+				nvx = XMVector3Length(vx);
+				XMStoreFloat(&len, nvx);
+				nvx = XMVector3Normalize(vx);
+				//nvx = vx / len;
+				angle = asinf(len);
+
+				//quat = XMQuaternionIdentity();
+
+			//	quat = XMQuaternionRotationAxis(nvx, angle);
+				quat = XMQuaternionRotationNormal(nvx, angle);
+
+
+				quat = XMQuaternionSlerp(XMLoadFloat4(&g_Player[i].Quaternion), quat, 0.05f);
+				XMStoreFloat4(&g_Player[i].Quaternion, quat);
 
 
 #ifdef _DEBUG
-		// デバッグ表示
-		PrintDebugProc("Player X:%f Y:%f Z:% N:%f\n", g_Player.pos.x, g_Player.pos.y, g_Player.pos.z, Normal.y);
+				// デバッグ表示
+				//PrintDebugProc("Player X:%f Y:%f Z:% N:%f\n", g_Player[i].pos.x, g_Player[i].pos.y, g_Player[i].pos.z, Normal.y);
 #endif
-	}
-
-	if (g_Player.use == FALSE)
-	{
-		g_RotDead += RADIAN * 5.0f;
-		for (int i = 0; i < g_Player.model.SubsetNum; i++)
-		{
-			SetModelDiffuse(&g_Player.model, i, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * (float)cos(g_RotDead)));
-		}
-
-		for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-		{
-			for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
-			{
-				SetModelDiffuse(&g_Parts[i].model, j, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * (float)cos(g_RotDead)));
 			}
-		}
 
-		XMFLOAT4 playerDiffuse[MODEL_MAX_MATERIAL];
-		GetModelDiffuse(&g_Player.model, &playerDiffuse[0]);
+			if (g_Player[i].use == FALSE)
+			{
+				g_RotDead += RADIAN * 5.0f;
+				for (int j = 0; j < g_Player[i].model.SubsetNum; j++)
+				{
+					SetModelDiffuse(&g_Player[i].model, j, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * (float)cos(g_RotDead)));
+				}
 
-		if (playerDiffuse[0].w <= 0.0f)
-		{
-			SetFade(FADE_OUT, MODE_GAMEOVER);
+				for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+				{
+					for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+					{
+						SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f * (float)cos(g_RotDead)));
+					}
+				}
+
+				XMFLOAT4 playerDiffuse[MODEL_MAX_MATERIAL];
+				GetModelDiffuse(&g_Player[i].model, &playerDiffuse[0]);
+
+				if (playerDiffuse[0].w <= 0.0f)
+				{
+					SetFade(FADE_OUT, MODE_GAMEOVER);
+				}
+			}
 		}
 	}
 }
@@ -1314,178 +1360,184 @@ void UpdatePlayer(void)
 //=============================================================================
 void DrawPlayer(void)
 {
-	if (g_Player.use == TRUE)
+	for (int i = 0; i < PLAYER_MAX; i++)
 	{
-		// マテリアル退避用
-		XMFLOAT4 playerDiffuse[MODEL_MAX_MATERIAL];
-		XMFLOAT4 partsDiffuse[PLAYER_PARTS_MAX][MODEL_MAX_MATERIAL];
-		// 平坦化行列の影描画
+		if (GetViewPortTypeGame() == TYPE_FULL_SCREEN && i == 1) continue;
+
+		if (g_Player[i].use == TRUE || (GetMode() == MODE_TITLE && i == 0))
 		{
-			GetModelDiffuse(&g_Player.model, &playerDiffuse[0]);
-			for (int i = 0; i < g_Player.model.SubsetNum; i++)
+			if (GetViewPortTypeGame() == TYPE_LEFT_HALF_SCREEN && i != GetPlayerNum()) continue;
+
+			// マテリアル退避用
+			XMFLOAT4 playerDiffuse[MODEL_MAX_MATERIAL];
+			XMFLOAT4 partsDiffuse[PLAYER_PARTS_MAX][MODEL_MAX_MATERIAL];
+			// 平坦化行列の影描画
 			{
-				SetModelDiffuse(&g_Player.model, i, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
-			}
-
-			XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld;
-
-			// ワールドマトリックスの初期化
-			mtxWorld = XMMatrixIdentity();
-
-			// スケールを反映
-			mtxScl = XMMatrixScaling(g_Player.scl.x * 1.2f, 0.1f, g_Player.scl.z * 1.2f);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
-
-			// 回転を反映
-			mtxRot = XMMatrixRotationRollPitchYaw(g_Player.rot.x, g_Player.rot.y + XM_PI, g_Player.rot.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
-
-			// 移動を反映
-			mtxTranslate = XMMatrixTranslation(g_Player.pos.x, g_Player.pos.y - PLAYER_OFFSET_Y, g_Player.pos.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
-
-			// ワールドマトリックスの設定
-			SetWorldMatrix(&mtxWorld);
-
-			XMStoreFloat4x4(&g_Player.mtxWorld, mtxWorld);
-
-
-			// モデル描画
-			DrawModel(&g_Player.model);
-
-			// 階層アニメーション
-			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-			{
-				GetModelDiffuse(&g_Parts[i].model, &partsDiffuse[i][0]);
-				for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
+				GetModelDiffuse(&g_Player[i].model, &playerDiffuse[0]);
+				for (int j = 0; j < g_Player[i].model.SubsetNum; j++)
 				{
-					SetModelDiffuse(&g_Parts[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
-				}
-				// ワールドマトリックスの初期化
-				mtxWorld = XMMatrixIdentity();
-
-				// スケールを反映
-				mtxScl = XMMatrixScaling(g_Parts[i].scl.x * 1.2f, 0.1f, g_Parts[i].scl.z * 1.2f);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
-
-				// 回転を反映
-				mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i].rot.x, g_Parts[i].rot.y, g_Parts[i].rot.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
-
-				// 移動を反映
-				mtxTranslate = XMMatrixTranslation(g_Parts[i].pos.x, g_Parts[i].pos.y, g_Parts[i].pos.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
-
-				if (g_Parts[i].parent != NULL)	// 子供だったら親と結合する
-				{
-					mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i].parent->mtxWorld));
-					// ↑
-					// g_Player.mtxWorldを指している
+					SetModelDiffuse(&g_Player[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
 				}
 
-				XMStoreFloat4x4(&g_Parts[i].mtxWorld, mtxWorld);
-
-				// 使われているなら処理する
-				if (g_Parts[i].use == FALSE) continue;
-
-				// ワールドマトリックスの設定
-				SetWorldMatrix(&mtxWorld);
-
-				// モデル描画
-				DrawModel(&g_Parts[i].model);
-
-			}
-		}
-
-		// モデル描画
-		{
-			for (int i = 0; i < g_Player.model.SubsetNum; i++)
-			{
-				SetModelDiffuse(&g_Player.model, i, playerDiffuse[i]);
-			}
-
-			// ボス戦に入ったら光らせる
-			if (GetBossFlg() == TRUE)
-			{
-				SetRimLight(2);
-			}
-			XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld, quatMatrix;
-
-			// カリング無効
-			SetCullingMode(CULL_MODE_NONE);
-
-			// ワールドマトリックスの初期化
-			mtxWorld = XMMatrixIdentity();
-
-			// スケールを反映
-			mtxScl = XMMatrixScaling(g_Player.scl.x, g_Player.scl.y, g_Player.scl.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
-
-			// 回転を反映
-			mtxRot = XMMatrixRotationRollPitchYaw(g_Player.rot.x, g_Player.rot.y + XM_PI, g_Player.rot.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
-
-			// クォータニオンを反映
-			quatMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&g_Player.Quaternion));
-			mtxWorld = XMMatrixMultiply(mtxWorld, quatMatrix);
-
-			// 移動を反映
-			mtxTranslate = XMMatrixTranslation(g_Player.pos.x, g_Player.pos.y, g_Player.pos.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
-
-			// ワールドマトリックスの設定
-			SetWorldMatrix(&mtxWorld);
-
-			XMStoreFloat4x4(&g_Player.mtxWorld, mtxWorld);
-
-			// モデル描画
-			DrawModel(&g_Player.model);
-
-
-			// 階層アニメーション
-			for (int i = 0; i < PLAYER_PARTS_MAX; i++)
-			{
-				for (int j = 0; j < g_Parts[i].model.SubsetNum; j++)
-				{
-					SetModelDiffuse(&g_Parts[i].model, j, partsDiffuse[i][j]);
-				}
+				XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld;
 
 				// ワールドマトリックスの初期化
 				mtxWorld = XMMatrixIdentity();
 
 				// スケールを反映
-				mtxScl = XMMatrixScaling(g_Parts[i].scl.x, g_Parts[i].scl.y, g_Parts[i].scl.z);
+				mtxScl = XMMatrixScaling(g_Player[i].scl.x * 1.2f, 0.1f, g_Player[i].scl.z * 1.2f);
 				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
 
 				// 回転を反映
-				mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i].rot.x, g_Parts[i].rot.y, g_Parts[i].rot.z);
+				mtxRot = XMMatrixRotationRollPitchYaw(g_Player[i].rot.x, g_Player[i].rot.y + XM_PI, g_Player[i].rot.z);
 				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
 
 				// 移動を反映
-				mtxTranslate = XMMatrixTranslation(g_Parts[i].pos.x, g_Parts[i].pos.y, g_Parts[i].pos.z);
+				mtxTranslate = XMMatrixTranslation(g_Player[i].pos.x, g_Player[i].pos.y - PLAYER_OFFSET_Y, g_Player[i].pos.z);
 				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
-
-				if (g_Parts[i].parent != NULL)	// 子供だったら親と結合する
-				{
-					mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i].parent->mtxWorld));
-					// ↑
-					// g_Player.mtxWorldを指している
-				}
-
-				XMStoreFloat4x4(&g_Parts[i].mtxWorld, mtxWorld);
-
-				// 使われているなら処理する
-				if (g_Parts[i].use == FALSE) continue;
 
 				// ワールドマトリックスの設定
 				SetWorldMatrix(&mtxWorld);
 
+				XMStoreFloat4x4(&g_Player[i].mtxWorld, mtxWorld);
+
+
 				// モデル描画
-				DrawModel(&g_Parts[i].model);
+				DrawModel(&g_Player[i].model);
+
+				// 階層アニメーション
+				for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+				{
+					GetModelDiffuse(&g_Parts[i][j].model, &partsDiffuse[j][0]);
+					for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+					{
+						SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+					}
+					// ワールドマトリックスの初期化
+					mtxWorld = XMMatrixIdentity();
+
+					// スケールを反映
+					mtxScl = XMMatrixScaling(g_Parts[i][j].scl.x * 1.2f, 0.1f, g_Parts[i][j].scl.z * 1.2f);
+					mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+					// 回転を反映
+					mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i][j].rot.x, g_Parts[i][j].rot.y, g_Parts[i][j].rot.z);
+					mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+					// 移動を反映
+					mtxTranslate = XMMatrixTranslation(g_Parts[i][j].pos.x, g_Parts[i][j].pos.y, g_Parts[i][j].pos.z);
+					mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+					if (g_Parts[i][j].parent != NULL)	// 子供だったら親と結合する
+					{
+						mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i][j].parent->mtxWorld));
+						// ↑
+						// g_Player[i].mtxWorldを指している
+					}
+
+					XMStoreFloat4x4(&g_Parts[i][j].mtxWorld, mtxWorld);
+
+					// 使われているなら処理する
+					if (g_Parts[i][j].use == FALSE) continue;
+
+					// ワールドマトリックスの設定
+					SetWorldMatrix(&mtxWorld);
+
+					// モデル描画
+					DrawModel(&g_Parts[i][j].model);
+
+				}
+			}
+
+			// モデル描画
+			{
+				for (int j = 0; j < g_Player[i].model.SubsetNum; j++)
+				{
+					SetModelDiffuse(&g_Player[i].model, j, playerDiffuse[j]);
+				}
+
+				// ボス戦に入ったら光らせる
+				//if (GetBossFlg() == TRUE)
+				{
+					SetRimLight(2);
+				}
+				XMMATRIX mtxScl, mtxRot, mtxTranslate, mtxWorld, quatMatrix;
+
+				// カリング無効
+				SetCullingMode(CULL_MODE_NONE);
+
+				// ワールドマトリックスの初期化
+				mtxWorld = XMMatrixIdentity();
+
+				// スケールを反映
+				mtxScl = XMMatrixScaling(g_Player[i].scl.x, g_Player[i].scl.y, g_Player[i].scl.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+				// 回転を反映
+				mtxRot = XMMatrixRotationRollPitchYaw(g_Player[i].rot.x, g_Player[i].rot.y + XM_PI, g_Player[i].rot.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+				// クォータニオンを反映
+				quatMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&g_Player[i].Quaternion));
+				mtxWorld = XMMatrixMultiply(mtxWorld, quatMatrix);
+
+				// 移動を反映
+				mtxTranslate = XMMatrixTranslation(g_Player[i].pos.x, g_Player[i].pos.y, g_Player[i].pos.z);
+				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+				// ワールドマトリックスの設定
+				SetWorldMatrix(&mtxWorld);
+
+				XMStoreFloat4x4(&g_Player[i].mtxWorld, mtxWorld);
+
+				// モデル描画
+				DrawModel(&g_Player[i].model);
+
+
+				// 階層アニメーション
+				for (int j = 0; j < PLAYER_PARTS_MAX; j++)
+				{
+					for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+					{
+						SetModelDiffuse(&g_Parts[i][j].model, k, partsDiffuse[j][k]);
+					}
+
+					// ワールドマトリックスの初期化
+					mtxWorld = XMMatrixIdentity();
+
+					// スケールを反映
+					mtxScl = XMMatrixScaling(g_Parts[i][j].scl.x, g_Parts[i][j].scl.y, g_Parts[i][j].scl.z);
+					mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+
+					// 回転を反映
+					mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i][j].rot.x, g_Parts[i][j].rot.y, g_Parts[i][j].rot.z);
+					mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+
+					// 移動を反映
+					mtxTranslate = XMMatrixTranslation(g_Parts[i][j].pos.x, g_Parts[i][j].pos.y, g_Parts[i][j].pos.z);
+					mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+
+					if (g_Parts[i][j].parent != NULL)	// 子供だったら親と結合する
+					{
+						mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i][j].parent->mtxWorld));
+						// ↑
+						// g_Player[i].mtxWorldを指している
+					}
+
+					XMStoreFloat4x4(&g_Parts[i][j].mtxWorld, mtxWorld);
+
+					// 使われているなら処理する
+					if (g_Parts[i][j].use == FALSE) continue;
+
+					// ワールドマトリックスの設定
+					SetWorldMatrix(&mtxWorld);
+
+					// モデル描画
+					DrawModel(&g_Parts[i][j].model);
+				}
 			}
 		}
 	}
-
 	SetRimLight(0);
 	// カリング設定を戻す
 	SetCullingMode(CULL_MODE_BACK);
@@ -1496,7 +1548,7 @@ void DrawPlayer(void)
 //=============================================================================
 PLAYER* GetPlayer(void)
 {
-	return &g_Player;
+	return &g_Player[0];
 }
 
 //=============================================================================
@@ -1504,7 +1556,7 @@ PLAYER* GetPlayer(void)
 //=============================================================================
 PLAYER* GetPlayerParts(void)
 {
-	return &g_Parts[0];
+	return &g_Parts[0][0];
 }
 
 //=============================================================================

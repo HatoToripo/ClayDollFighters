@@ -64,8 +64,8 @@ static int g_Label;
 //=============================================================================
 bool InitSound(HWND hWnd)
 {
-	g_Volume = 1;		// ‰¹—Ê‚Ì‰Šú‰»
-	g_SEVolume = 1;		// SE‰¹—Ê‚Ì‰Šú‰»
+	g_Volume = 3;		// ‰¹—Ê‚Ì‰Šú‰»
+	g_SEVolume = 3;		// SE‰¹—Ê‚Ì‰Šú‰»
 	HRESULT hr;
 
 	// COMƒ‰ƒCƒuƒ‰ƒŠ‚Ì‰Šú‰»
