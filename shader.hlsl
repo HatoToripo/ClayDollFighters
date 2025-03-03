@@ -89,7 +89,7 @@ struct DISSOLVE
     float Threshold; // ディゾルブの閾値
     float edgeWidth; // エッジの幅
     int Enable;
-    int Dummy; //16byte境界用
+    float Dummy; //16byte境界用
 };
 // ディゾルブ用バッファ
 cbuffer DissolveBuffer : register(b8)
@@ -97,18 +97,18 @@ cbuffer DissolveBuffer : register(b8)
     DISSOLVE Dissolve;
 }
 
-//struct SECTOR
-//{
-//    float startAngle;
-//    float endAngle;
-//    int flag;
-//    int Dummy; //16byte境界用
-//};
+// シャドウマップ
+struct SHADOWMAP
+{
+    matrix lightViewProj;
 
-//cbuffer SectorBuffer : register(b8)
-//{
-//    SECTOR Sector;
-//};
+};
+
+// シャドウマップ用バッファ
+cbuffer ShadowMapBuffer : register(b9)
+{
+    SHADOWMAP Shadowmap;
+}
 
 
 //=============================================================================
@@ -123,7 +123,8 @@ void VertexShaderPolygon( in  float4 inPosition		: POSITION0,
 						  out float4 outNormal		: NORMAL0,
 						  out float2 outTexCoord	: TEXCOORD0,
 						  out float4 outDiffuse		: COLOR0,
-						  out float4 outWorldPos    : POSITION0)
+						  out float4 outWorldPos    : POSITION0,
+						  out float4 outLightPos : TEXCOORD1)
 {
 	matrix wvp;
 	wvp = mul(World, View);
@@ -136,6 +137,8 @@ void VertexShaderPolygon( in  float4 inPosition		: POSITION0,
 
 	outWorldPos = mul(inPosition, World);
 
+    outLightPos = mul(outWorldPos, Shadowmap.lightViewProj);
+
 	outDiffuse = inDiffuse;
 }
 
@@ -145,9 +148,11 @@ void VertexShaderPolygon( in  float4 inPosition		: POSITION0,
 // グローバル変数
 //*****************************************************************************
 Texture2D		g_Texture : register( t0 );
-Texture2D		noiseTexture : register(t1); // ノイズマップ
-SamplerState	g_SamplerState : register( s0 );
+Texture2D		g_ShadowMap : register(t1); // シャドウマッピング用
+Texture2D		g_NoiseTexture : register(t2); // ディゾルブ用ノイズマップ
 
+SamplerState g_SamplerState : register(s0);
+SamplerComparisonState g_ShadowMapSampler : register(s1);
 
 //=============================================================================
 // ピクセルシェーダ
@@ -157,6 +162,7 @@ void PixelShaderPolygon( in  float4 inPosition		: SV_POSITION,
 						 in  float2 inTexCoord		: TEXCOORD0,
 						 in  float4 inDiffuse		: COLOR0,
 						 in  float4 inWorldPos      : POSITION0,
+						 in  float4 inLightPos		: TEXCOORD1,
 
 						 out float4 outDiffuse		: SV_Target )
 {
@@ -260,7 +266,7 @@ void PixelShaderPolygon( in  float4 inPosition		: SV_POSITION,
 
     if (Dissolve.Enable == 1)
     {
-        float noiseValue = noiseTexture.Sample(g_SamplerState, inTexCoord).r;
+        float noiseValue = g_NoiseTexture.Sample(g_SamplerState, inTexCoord).r;
 	
 	  // ノイズ値と閾値を比較してディゾルブを適用
         if (noiseValue < Dissolve.Threshold)
@@ -273,29 +279,72 @@ void PixelShaderPolygon( in  float4 inPosition		: SV_POSITION,
             discard;
         }
     }
-	//if (Sector.flag == true)
- //   {
-	//	// UV座標系の中心からのベクトル
- //       float2 dir = inTexCoord - float2(0.5f, 0.5f);
- //       float dist = length(dir);
-		
-	//	if (dist > 0.5f)
- //       {
- //           outDiffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
- //       }
-		
-	//	// 角度計算
- //       float angle = atan2(dir.y, dir.x);
-		
-	//	// 扇形の範囲内チェック
- //       if (angle >= 0.0f && angle <= 1.0f)
- //       {
- //           outDiffuse = inDiffuse;
- //       }
-		
- //       else
- //       {
- //           outDiffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
- //       }
- //   }
+	
+		// シャドウマップ
+    if (Light.Enable == 1)
+    {
+        if (Light.Flags[0].y == 1)
+        {
+            float shadowFactor = 1.0;
+            float2 shadowTexCoord = float2(inLightPos.x, -inLightPos.y) / inLightPos.w * 0.5 + 0.5;
+            float currentDepth = inLightPos.z / inLightPos.w;
+            currentDepth -= 0.005;
+
+            shadowFactor = g_ShadowMap.SampleCmpLevelZero(g_ShadowMapSampler, shadowTexCoord, currentDepth);
+
+            //if (shadowTexCoord.x < 0 || shadowTexCoord.x > 1 || shadowTexCoord.y < 0 || shadowTexCoord.y > 1)
+            //{
+            //    shadowFactor = 1.0;
+            //}
+
+			//if (shadowFactor == 0)
+			//{
+				//shadowFactor = 0.2;
+			//}
+
+		// PCF 計算
+            float2 texelSize = 1.0 / 4096.0;
+            float2 offsets[9] =
+            {
+                float2(-1, -1), float2(0, -1), float2(1, -1),
+				float2(-1, 0), float2(0, 0), float2(1, 0),
+				float2(-1, 1), float2(0, 1), float2(1, 1)
+            };
+
+            float pcfRadius = 1.0f;
+            float shadow = 0.0;
+            for (int i = 0; i < 9; ++i)
+            {
+				// サンプリング
+                float2 sampleCoord = shadowTexCoord + offsets[i] * texelSize * pcfRadius;
+
+				// 結果を追加
+                shadow += g_ShadowMap.SampleCmpLevelZero(g_ShadowMapSampler, sampleCoord, currentDepth);
+            }
+			
+			// 平均値を求める
+            shadow /= 9.0;
+            if (shadow == 0)
+            {
+                shadow = 0.4;
+            }
+            else if (shadow > 0 && shadow < 1)
+            {
+                shadow = 0.4 + shadow;
+                if (shadow > 0.9)
+                {
+                    shadow = 0.9;
+                }
+            }
+
+            if (shadowTexCoord.x < 0 || shadowTexCoord.x > 1 || shadowTexCoord.y < 0 || shadowTexCoord.y > 1)
+            {
+                shadow = 1.0;
+            }
+			// PCF 終了
+	
+		// outDiffuse.xyz *= shadowFactor;
+            outDiffuse.xyz *= shadow;
+        }
+    }
 }

@@ -281,12 +281,31 @@ void UpdateGame(void)
 //=============================================================================
 void DrawGame0(void)
 {
+	// シャドウマップ描画
+
+	int viewPortType = GetViewPortType();
+
+	SetShadowMapBuffer();
+	SetShader(SHADOW_MAP);
+	SetRenderTargetView(SHADOW_MAP);
+	SetViewPort(TYPE_SHADOWMAP);
+	// プレイヤーの描画処理
+	DrawPlayer();
+	// エネミーの描画処理
+	DrawEnemy();
+
+	// 通常描画
+	SetViewPort(viewPortType);
+	SetRenderTargetView(NORMAL_SCENE);
+	SetShaderResource(SHADOW_MAP);
+	SetShader(NORMAL_SCENE);
+
 	// 3Dの物を描画する処理
 	// 地面の描画処理
 	DrawMeshField();
 
 	// 影の描画処理
-	DrawShadow();
+	//DrawShadow();
 
 	// エネミーの描画処理
 	DrawEnemy();
