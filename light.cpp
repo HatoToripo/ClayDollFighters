@@ -7,7 +7,7 @@
 #include "main.h"
 #include "renderer.h"
 #include "light.h"
-
+#include "player.h"
 //*****************************************************************************
 // マクロ定義
 //*****************************************************************************
@@ -27,6 +27,10 @@ static LIGHT	g_Light[LIGHT_MAX];
 static FOG		g_Fog;
 
 static BOOL		g_FogEnable = FALSE;
+
+static 	XMFLOAT3 g_pos;
+static 	XMFLOAT3 g_dir;
+static PLAYER* g_player = GetPlayer();
 
 //=============================================================================
 // 初期化処理
@@ -49,7 +53,7 @@ void InitLight(void)
 
 	// 並行光源の設定（世界を照らす光）
 	g_Light[0].Position = XMFLOAT3( 0.0f, DIRECTIONAL_LIGHT_Y, 0.0f );		// 光の向き
-	g_Light[0].Direction = XMFLOAT3( 0.0f, -1.0f, 0.0f );		// 光の向き
+	g_Light[0].Direction = XMFLOAT3(-0.5f, -1.0f, 0.2f);		// 光の向き
 	g_Light[0].Diffuse   = XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f );	// 光の色
 	g_Light[0].Type = LIGHT_TYPE_DIRECTIONAL;					// 並行光源
 	g_Light[0].Enable = TRUE;									// このライトをON
@@ -84,6 +88,10 @@ void SetLightData(int index, LIGHT *light)
 	SetLight(index, light);
 }
 
+LIGHT* GetLight(void)
+{
+	return &g_Light[0];
+}
 
 LIGHT *GetLightData(int index)
 {
@@ -105,4 +113,28 @@ BOOL	GetFogEnable(void)
 	return(g_FogEnable);
 }
 
+void SetLightProjectViewMatrix()
+{
+	XMFLOAT3 p_pos = { 0.0f,1.0f,0.0f };
 
+	p_pos = g_player->pos;
+	g_pos = g_player->pos;
+
+	XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+
+
+	XMVECTOR  l_dir = XMVector3Normalize(XMLoadFloat3(&g_dir));
+	float lightHeight = 500.0f;
+	XMVECTOR player_pos = XMLoadFloat3(&p_pos);
+
+
+	XMVECTOR lightPosition = player_pos - l_dir * lightHeight;
+
+
+	XMMATRIX lightView = XMMatrixLookAtLH(lightPosition, XMLoadFloat3(&p_pos), XMLoadFloat3(&up));
+	XMMATRIX lightProjection = XMMatrixOrthographicLH(1000.0f, 1000.0f, 0.1f, 1000.0f);
+	XMMATRIX lightProjView = XMMatrixMultiply(lightView, lightProjection);
+
+
+	lightProjView = XMMatrixTranspose(lightProjView);
+}

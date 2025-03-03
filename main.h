@@ -75,6 +75,7 @@ enum
 	MODE_GAME,				// ゲーム画面
 	MODE_RESULT,			// リザルト画面
 	MODE_GAMEOVER,			// ゲームオーバー画面
+	MODE_EDITOR,			// 編集画面
 	MODE_MAX
 };
 

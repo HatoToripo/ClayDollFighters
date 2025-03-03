@@ -866,6 +866,7 @@ void UpdateEnemy(void)
 
 			//if (CollisionBC(player->pos, pos, player->size, LOOK_CIRCLE))
 
+			// プレイヤーが検知範囲内にいるか
 			XMFLOAT3 dir = XMFLOAT3((float)cosf(-(g_Enemy[i].rot.y + RADIAN * 90.0f)), 0.0f, (float)sinf(-(g_Enemy[i].rot.y + LOOK_CIRCLE_RAD)));
 			if (CollisionSector(player->pos, g_Enemy[i].pos, dir, LOOK_CIRCLE, LOOK_CIRCLE_RAD))
 			{
@@ -938,8 +939,8 @@ void UpdateEnemy(void)
 					g_Enemy[i].moveCnt = (g_Enemy[i].moveCnt + 1) % MOVE_INTERVAL;
 					if (g_Enemy[i].moveFlg == TRUE)
 					{
-						g_Enemy[i].pos.x += cosf(-(g_Enemy[i].rot.y + RADIAN * 90.0f)) * VALUE_MOVE;
-						g_Enemy[i].pos.z += sinf(-(g_Enemy[i].rot.y + RADIAN * 90.0f)) * VALUE_MOVE;
+						g_Enemy[i].pos.x -= sinf(g_Enemy[i].rot.y) * VALUE_MOVE;
+						g_Enemy[i].pos.z -= cosf(g_Enemy[i].rot.y) * VALUE_MOVE;
 						// 壁の座標を超えないように調整
 						if (g_Enemy[i].pos.x > MAP_RIGHT - g_Enemy[i].size * 0.5f)
 						{
@@ -1117,96 +1118,97 @@ void DrawEnemy(void)
 	for (int i = 0; i < ENEMY_MAX; i++)
 	{
 		if (g_Enemy[i].use == FALSE && g_Enemy[i].dissolveCnt >= RADIAN * 90.0f) continue;
-		XMFLOAT4 enemyDiffuse[MODEL_MAX_MATERIAL];
-		XMFLOAT4 partsDiffuse[ENEMY_PARTS_MAX][MODEL_MAX_MATERIAL];
+		if (g_Enemy[i].use == FALSE && GetViewPortType() == TYPE_SHADOWMAP) continue;
+		//XMFLOAT4 enemyDiffuse[MODEL_MAX_MATERIAL];
+		//XMFLOAT4 partsDiffuse[ENEMY_PARTS_MAX][MODEL_MAX_MATERIAL];
 
-		GetModelDiffuse(&g_Enemy[i].model, &enemyDiffuse[0]);
+		//GetModelDiffuse(&g_Enemy[i].model, &enemyDiffuse[0]);
 		// 平坦化行列の影描画
-		{
-			for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
-			{
-				SetModelDiffuse(&g_Enemy[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
-			}
+		//{
+		//	for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
+		//	{
+		//		SetModelDiffuse(&g_Enemy[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+		//	}
 
-			// ワールドマトリックスの初期化
-			mtxWorld = XMMatrixIdentity();
+		//	// ワールドマトリックスの初期化
+		//	mtxWorld = XMMatrixIdentity();
 
-			// スケールを反映
-			mtxScl = XMMatrixScaling(g_Enemy[i].scl.x * 1.2f, 0.1f, g_Enemy[i].scl.z * 1.2f);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+		//	// スケールを反映
+		//	mtxScl = XMMatrixScaling(g_Enemy[i].scl.x * 1.2f, 0.1f, g_Enemy[i].scl.z * 1.2f);
+		//	mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
 
-			// 回転を反映
-			mtxRot = XMMatrixRotationRollPitchYaw(g_Enemy[i].rot.x, g_Enemy[i].rot.y + XM_PI, g_Enemy[i].rot.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+		//	// 回転を反映
+		//	mtxRot = XMMatrixRotationRollPitchYaw(g_Enemy[i].rot.x, g_Enemy[i].rot.y + XM_PI, g_Enemy[i].rot.z);
+		//	mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
 
-			// 移動を反映
-			mtxTranslate = XMMatrixTranslation(g_Enemy[i].pos.x, g_Enemy[i].pos.y - ENEMY_OFFSET_Y, g_Enemy[i].pos.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+		//	// 移動を反映
+		//	mtxTranslate = XMMatrixTranslation(g_Enemy[i].pos.x, g_Enemy[i].pos.y - ENEMY_OFFSET_Y, g_Enemy[i].pos.z);
+		//	mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
 
-			// ワールドマトリックスの設定
-			SetWorldMatrix(&mtxWorld);
+		//	// ワールドマトリックスの設定
+		//	SetWorldMatrix(&mtxWorld);
 
-			XMStoreFloat4x4(&g_Enemy[i].mtxWorld, mtxWorld);
+		//	XMStoreFloat4x4(&g_Enemy[i].mtxWorld, mtxWorld);
 
 
-			// モデル描画
-			DrawModel(&g_Enemy[i].model);
-			for (int j = 0; j < ENEMY_PARTS_MAX; j++)
-			{
-				GetModelDiffuse(&g_Parts[i][j].model, &partsDiffuse[j][0]);
-				for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
-				{
-					SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
-				}
+		//	// モデル描画
+		//	DrawModel(&g_Enemy[i].model);
+		//	for (int j = 0; j < ENEMY_PARTS_MAX; j++)
+		//	{
+		//		GetModelDiffuse(&g_Parts[i][j].model, &partsDiffuse[j][0]);
+		//		for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+		//		{
+		//			SetModelDiffuse(&g_Parts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+		//		}
 
-				// ワールドマトリックスの初期化
-				mtxWorld = XMMatrixIdentity();
+		//		// ワールドマトリックスの初期化
+		//		mtxWorld = XMMatrixIdentity();
 
-				// スケールを反映
-				mtxScl = XMMatrixScaling(g_Parts[i][j].scl.x * 1.2f, 0.1f, g_Parts[i][j].scl.z * 1.2f);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+		//		// スケールを反映
+		//		mtxScl = XMMatrixScaling(g_Parts[i][j].scl.x * 1.2f, 0.1f, g_Parts[i][j].scl.z * 1.2f);
+		//		mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
 
-				// 回転を反映
-				mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i][j].rot.x, 0.0f, g_Parts[i][j].rot.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+		//		// 回転を反映
+		//		mtxRot = XMMatrixRotationRollPitchYaw(g_Parts[i][j].rot.x, 0.0f, g_Parts[i][j].rot.z);
+		//		mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
 
-				// 移動を反映
-				mtxTranslate = XMMatrixTranslation(g_Parts[i][j].pos.x, g_Parts[i][j].pos.y, g_Parts[i][j].pos.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+		//		// 移動を反映
+		//		mtxTranslate = XMMatrixTranslation(g_Parts[i][j].pos.x, g_Parts[i][j].pos.y, g_Parts[i][j].pos.z);
+		//		mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
 
-				if (g_Parts[i][j].parent != NULL)	// 子供だったら親と結合する
-				{
-					mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i][j].parent->mtxWorld));
-					// ↑
-					// g_Player.mtxWorldを指している
-				}
+		//		if (g_Parts[i][j].parent != NULL)	// 子供だったら親と結合する
+		//		{
+		//			mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_Parts[i][j].parent->mtxWorld));
+		//			// ↑
+		//			// g_Player.mtxWorldを指している
+		//		}
 
-				XMStoreFloat4x4(&g_Parts[i][j].mtxWorld, mtxWorld);
+		//		XMStoreFloat4x4(&g_Parts[i][j].mtxWorld, mtxWorld);
 
-				// 使われているなら処理する
-				if (g_Parts[i][j].use == FALSE) continue;
+		//		// 使われているなら処理する
+		//		if (g_Parts[i][j].use == FALSE) continue;
 
-				// ワールドマトリックスの設定
-				SetWorldMatrix(&mtxWorld);
+		//		// ワールドマトリックスの設定
+		//		SetWorldMatrix(&mtxWorld);
 
-				if (g_Enemy[i].use == FALSE)
-				{
-					SetDissolve(&g_EnemyDissolve[i]);
-					SetDissolveBuffer(TRUE, sinf(g_Enemy[i].dissolveCnt));
-				}
+		//		if (g_Enemy[i].use == FALSE)
+		//		{
+		//			SetDissolve(&g_EnemyDissolve[i]);
+		//			SetDissolveBuffer(TRUE, sinf(g_Enemy[i].dissolveCnt));
+		//		}
 
-				// モデル描画
-				DrawModel(&g_Parts[i][j].model);
-			}
+		//		// モデル描画
+		//		DrawModel(&g_Parts[i][j].model);
+		//	}
 
-		}
+		//}
 
 		// モデル描画
 		{
-			for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
-			{
-				SetModelDiffuse(&g_Enemy[i].model, j, enemyDiffuse[j]);
-			}
+			//for (int j = 0; j < g_Enemy[i].model.SubsetNum; j++)
+			//{
+			//	SetModelDiffuse(&g_Enemy[i].model, j, enemyDiffuse[j]);
+			//}
 
 			// ワールドマトリックスの初期化
 			mtxWorld = XMMatrixIdentity();
@@ -1228,15 +1230,20 @@ void DrawEnemy(void)
 
 			XMStoreFloat4x4(&g_Enemy[i].mtxWorld, mtxWorld);
 
+			if (g_Enemy[i].use == FALSE)
+			{
+				SetDissolve(&g_EnemyDissolve[i]);
+				SetDissolveBuffer(TRUE, sinf(g_Enemy[i].dissolveCnt));
+			}
 
 			// モデル描画
 			DrawModel(&g_Enemy[i].model);
 			for (int j = 0; j < ENEMY_PARTS_MAX; j++)
 			{
-				for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
-				{
-					SetModelDiffuse(&g_Parts[i][j].model, k, partsDiffuse[j][k]);
-				}
+				//for (int k = 0; k < g_Parts[i][j].model.SubsetNum; k++)
+				//{
+				//	SetModelDiffuse(&g_Parts[i][j].model, k, partsDiffuse[j][k]);
+				//}
 				// ワールドマトリックスの初期化
 				mtxWorld = XMMatrixIdentity();
 
@@ -1279,91 +1286,91 @@ void DrawEnemy(void)
 	for (int i = 0; i < BOSS_MAX; i++)
 	{
 		if (g_Boss[i].use == FALSE) continue;
-		XMFLOAT4 bossDiffuse[MODEL_MAX_MATERIAL];
-		XMFLOAT4 bossPartsDiffuse[ENEMY_PARTS_MAX][MODEL_MAX_MATERIAL];
+		//XMFLOAT4 bossDiffuse[MODEL_MAX_MATERIAL];
+		//XMFLOAT4 bossPartsDiffuse[ENEMY_PARTS_MAX][MODEL_MAX_MATERIAL];
 
 		// 平坦化行列の影描画
-		{
-			GetModelDiffuse(&g_Boss[i].model, &bossDiffuse[0]);
-			for (int j = 0; j < g_Boss[i].model.SubsetNum; j++)
-			{
-				SetModelDiffuse(&g_Boss[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
-			}
+		//{
+		//	GetModelDiffuse(&g_Boss[i].model, &bossDiffuse[0]);
+		//	for (int j = 0; j < g_Boss[i].model.SubsetNum; j++)
+		//	{
+		//		SetModelDiffuse(&g_Boss[i].model, j, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+		//	}
 
-			// ワールドマトリックスの初期化
-			mtxWorld = XMMatrixIdentity();
+		//	// ワールドマトリックスの初期化
+		//	mtxWorld = XMMatrixIdentity();
 
-			// スケールを反映
-			mtxScl = XMMatrixScaling(g_Boss[i].scl.x * 1.2f, g_Boss[i].scl.y * 0.1f, g_Boss[i].scl.z * 1.2f);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+		//	// スケールを反映
+		//	mtxScl = XMMatrixScaling(g_Boss[i].scl.x * 1.2f, g_Boss[i].scl.y * 0.1f, g_Boss[i].scl.z * 1.2f);
+		//	mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
 
-			// 回転を反映
-			mtxRot = XMMatrixRotationRollPitchYaw(g_Boss[i].rot.x, g_Boss[i].rot.y + XM_PI, g_Boss[i].rot.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+		//	// 回転を反映
+		//	mtxRot = XMMatrixRotationRollPitchYaw(g_Boss[i].rot.x, g_Boss[i].rot.y + XM_PI, g_Boss[i].rot.z);
+		//	mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
 
-			// 移動を反映
-			mtxTranslate = XMMatrixTranslation(g_Boss[i].pos.x, g_Boss[i].pos.y - ENEMY_OFFSET_Y * BOSS_SIZE_VALUE, g_Boss[i].pos.z);
-			mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+		//	// 移動を反映
+		//	mtxTranslate = XMMatrixTranslation(g_Boss[i].pos.x, g_Boss[i].pos.y - ENEMY_OFFSET_Y * BOSS_SIZE_VALUE, g_Boss[i].pos.z);
+		//	mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
 
-			// ワールドマトリックスの設定
-			SetWorldMatrix(&mtxWorld);
+		//	// ワールドマトリックスの設定
+		//	SetWorldMatrix(&mtxWorld);
 
-			XMStoreFloat4x4(&g_Boss[i].mtxWorld, mtxWorld);
+		//	XMStoreFloat4x4(&g_Boss[i].mtxWorld, mtxWorld);
 
-			// モデル描画
-			DrawModel(&g_Boss[i].model);
-			for (int j = 0; j < ENEMY_PARTS_MAX; j++)
-			{
-				GetModelDiffuse(&g_BossParts[i][j].model, &bossPartsDiffuse[j][0]);
+		//	// モデル描画
+		//	DrawModel(&g_Boss[i].model);
+		//	for (int j = 0; j < ENEMY_PARTS_MAX; j++)
+		//	{
+		//		GetModelDiffuse(&g_BossParts[i][j].model, &bossPartsDiffuse[j][0]);
 
-				for (int k = 0; k < g_BossParts[i][j].model.SubsetNum; k++)
-				{
-					SetModelDiffuse(&g_BossParts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
-				}
+		//		for (int k = 0; k < g_BossParts[i][j].model.SubsetNum; k++)
+		//		{
+		//			SetModelDiffuse(&g_BossParts[i][j].model, k, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+		//		}
 
-				// ワールドマトリックスの初期化
-				mtxWorld = XMMatrixIdentity();
+		//		// ワールドマトリックスの初期化
+		//		mtxWorld = XMMatrixIdentity();
 
-				// スケールを反映
-				mtxScl = XMMatrixScaling(g_BossParts[i][j].scl.x, g_BossParts[i][j].scl.y, g_BossParts[i][j].scl.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
+		//		// スケールを反映
+		//		mtxScl = XMMatrixScaling(g_BossParts[i][j].scl.x, g_BossParts[i][j].scl.y, g_BossParts[i][j].scl.z);
+		//		mtxWorld = XMMatrixMultiply(mtxWorld, mtxScl);
 
-				// 回転を反映
-				mtxRot = XMMatrixRotationRollPitchYaw(g_BossParts[i][j].rot.x, 0.0f, g_BossParts[i][j].rot.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
+		//		// 回転を反映
+		//		mtxRot = XMMatrixRotationRollPitchYaw(g_BossParts[i][j].rot.x, 0.0f, g_BossParts[i][j].rot.z);
+		//		mtxWorld = XMMatrixMultiply(mtxWorld, mtxRot);
 
-				// 移動を反映
-				mtxTranslate = XMMatrixTranslation(g_BossParts[i][j].pos.x, g_BossParts[i][j].pos.y, g_BossParts[i][j].pos.z);
-				mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
+		//		// 移動を反映
+		//		mtxTranslate = XMMatrixTranslation(g_BossParts[i][j].pos.x, g_BossParts[i][j].pos.y, g_BossParts[i][j].pos.z);
+		//		mtxWorld = XMMatrixMultiply(mtxWorld, mtxTranslate);
 
-				if (g_BossParts[i][j].parent != NULL)	// 子供だったら親と結合する
-				{
-					mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_BossParts[i][j].parent->mtxWorld));
-					// ↑
-					// g_Player.mtxWorldを指している
-				}
+		//		if (g_BossParts[i][j].parent != NULL)	// 子供だったら親と結合する
+		//		{
+		//			mtxWorld = XMMatrixMultiply(mtxWorld, XMLoadFloat4x4(&g_BossParts[i][j].parent->mtxWorld));
+		//			// ↑
+		//			// g_Player.mtxWorldを指している
+		//		}
 
-				XMStoreFloat4x4(&g_BossParts[i][j].mtxWorld, mtxWorld);
+		//		XMStoreFloat4x4(&g_BossParts[i][j].mtxWorld, mtxWorld);
 
-				// 使われているなら処理する
-				if (g_BossParts[i][j].use == FALSE) continue;
+		//		// 使われているなら処理する
+		//		if (g_BossParts[i][j].use == FALSE) continue;
 
-				// ワールドマトリックスの設定
-				SetWorldMatrix(&mtxWorld);
+		//		// ワールドマトリックスの設定
+		//		SetWorldMatrix(&mtxWorld);
 
-				// モデル描画
-				DrawModel(&g_BossParts[i][j].model);
+		//		// モデル描画
+		//		DrawModel(&g_BossParts[i][j].model);
 
-			}
-		}
+		//	}
+		//}
 
 		// モデル描画
 		SetRimLight(1);
 		{
-			for (int j = 0; j < g_Boss[i].model.SubsetNum; j++)
-			{
-				SetModelDiffuse(&g_Boss[i].model, j, bossDiffuse[j]);
-			}
+			//for (int j = 0; j < g_Boss[i].model.SubsetNum; j++)
+			//{
+			//	SetModelDiffuse(&g_Boss[i].model, j, bossDiffuse[j]);
+			//}
 
 			// ワールドマトリックスの初期化
 			mtxWorld = XMMatrixIdentity();
@@ -1390,10 +1397,10 @@ void DrawEnemy(void)
 			DrawModel(&g_Boss[i].model);
 			for (int j = 0; j < ENEMY_PARTS_MAX; j++)
 			{
-				for (int k = 0; k < g_BossParts[i][j].model.SubsetNum; k++)
-				{
-					SetModelDiffuse(&g_BossParts[i][j].model, k, bossPartsDiffuse[j][k]);
-				}
+				//for (int k = 0; k < g_BossParts[i][j].model.SubsetNum; k++)
+				//{
+				//	SetModelDiffuse(&g_BossParts[i][j].model, k, bossPartsDiffuse[j][k]);
+				//}
 				// ワールドマトリックスの初期化
 				mtxWorld = XMMatrixIdentity();
 
@@ -1614,7 +1621,7 @@ int ENEMY::DecHP(int atk)
 	{
 		use = false;
 		//ReleaseShadow(shadowIdx);
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 30; i++)
 		{
 			SetParticle(pos, XMFLOAT4(0.8f, 0.7f, 0.2f, 0.85f));
 		}

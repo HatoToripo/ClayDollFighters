@@ -107,6 +107,7 @@ Index of this file:
 #include "main.h"
 #include "renderer.h"
 #include "radar.h"
+#include "editplayer.h"
 #include "player.h"
 #include "enemy.h"
 
@@ -2484,39 +2485,6 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     //    ImGui::TreePop();
     //}
 
-    //IMGUI_DEMO_MARKER("Game/Multi-component Widgets");
-    //if (ImGui::TreeNode("Multi-component Widgets"))
-    //{
-    //    static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-    //    static int vec4i[4] = { 1, 5, 100, 255 };
-
-    //    ImGui::SeparatorText("2-wide");
-    //    ImGui::InputFloat2("input float2", vec4f);
-    //    ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f);
-    //    ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
-    //    ImGui::InputInt2("input int2", vec4i);
-    //    ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
-    //    ImGui::SliderInt2("slider int2", vec4i, 0, 255);
-
-    //    ImGui::SeparatorText("3-wide");
-    //    ImGui::InputFloat3("input float3", vec4f);
-    //    ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f);
-    //    ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f);
-    //    ImGui::InputInt3("input int3", vec4i);
-    //    ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
-    //    ImGui::SliderInt3("slider int3", vec4i, 0, 255);
-
-    //    ImGui::SeparatorText("4-wide");
-    //    ImGui::InputFloat4("input float4", vec4f);
-    //    ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f);
-    //    ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f);
-    //    ImGui::InputInt4("input int4", vec4i);
-    //    ImGui::DragInt4("drag int4", vec4i, 1, 0, 255);
-    //    ImGui::SliderInt4("slider int4", vec4i, 0, 255);
-
-    //    ImGui::TreePop();
-    //}
-
     //IMGUI_DEMO_MARKER("Widgets/Vertical Sliders");
     //if (ImGui::TreeNode("Vertical Sliders"))
     //{
@@ -3937,6 +3905,52 @@ static void ShowDemoWindowLayout()
     IMGUI_DEMO_MARKER("Animation");
     if (!ImGui::CollapsingHeader("Animation"))
         return;
+
+    IMGUI_DEMO_MARKER("Animation/Multi-component Widgets");
+    if (ImGui::TreeNode("Multi-component Widgets"))
+    {
+        static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+        static int vec4i[4] = { 1, 5, 100, 255 };
+        static INTERPOLATION_DATA *stopTbl[PLAYER_ANIM_MAX];
+        for (int i = 0; i < PLAYER_ANIM_MAX; i++)
+        {
+            stopTbl[i] = GetStopTbl(i);
+        }
+        static float stopTblf[PLAYER_ANIM_MAX][3];
+        for (int i = 0; i < PLAYER_ANIM_MAX; i++)
+        {
+            stopTblf[i][0] = stopTbl[i]->pos.x;
+            stopTblf[i][1] = stopTbl[i]->pos.y;
+            stopTblf[i][2] = stopTbl[i]->pos.z;
+        }
+
+        ImGui::SeparatorText("2-wide");
+        ImGui::InputFloat2("input float2", vec4f);
+        ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f);
+        ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
+        ImGui::InputInt2("input int2", vec4i);
+        ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
+        ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+
+        ImGui::SeparatorText("3-wide");
+        ImGui::InputFloat3("input float3", stopTblf[0]);
+        ImGui::DragFloat3("drag float3", stopTblf[0], 0.01f, 0.0f, 1.0f);
+        ImGui::SliderFloat3("slider float3", stopTblf[0], 0.0f, 1.0f);
+        ImGui::InputInt3("input int3", vec4i);
+        ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
+        ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+
+        ImGui::SeparatorText("4-wide");
+        ImGui::InputFloat4("input float4", vec4f);
+        ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f);
+        ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f);
+        ImGui::InputInt4("input int4", vec4i);
+        ImGui::DragInt4("drag int4", vec4i, 1, 0, 255);
+        ImGui::SliderInt4("slider int4", vec4i, 0, 255);
+
+        ImGui::TreePop();
+    }
+
 
     IMGUI_DEMO_MARKER("Animation/Child windows");
     if (ImGui::TreeNode("Child windows"))

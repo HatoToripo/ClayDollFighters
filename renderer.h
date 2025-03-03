@@ -10,7 +10,10 @@
 //*********************************************************
 // マクロ定義
 //*********************************************************
-#define LIGHT_MAX		(20)
+#define LIGHT_MAX		(5)
+
+#define SHADOW_MAP_WIDTH		(4096)
+#define SHADOW_MAP_HEIGHT		(4096)
 
 enum LIGHT_TYPE
 {
@@ -40,6 +43,11 @@ enum CULL_MODE
 	CULL_MODE_NUM
 };
 
+enum RENDER_MODE
+{
+	NORMAL_SCENE,			// 通常
+	SHADOW_MAP				// シャドウマップ
+};
 
 //*********************************************************
 // 構造体
@@ -66,7 +74,8 @@ struct MATERIAL
 };
 
 // ライト構造体
-struct LIGHT {
+struct LIGHT
+{
 	XMFLOAT3	Direction;	// ライトの方向
 	XMFLOAT3	Position;	// ライトの位置
 	XMFLOAT4	Diffuse;	// 拡散光の色
@@ -77,23 +86,19 @@ struct LIGHT {
 };
 
 // フォグ構造体
-struct FOG {
+struct FOG 
+{
 	float		FogStart;	// フォグの開始距離
 	float		FogEnd;		// フォグの最大距離
 	XMFLOAT4	FogColor;	// フォグの色
 };
 
 // ディゾルブ構造体
-struct DISSOLVE {
+struct DISSOLVE 
+{
 	XMFLOAT4 edgeColor;
 };
 
-// 扇形構造体
-//struct SECTOR{
-//	float startAngle;
-//	float endAngle;
-//	int flag;
-//};
 
 //*****************************************************************************
 // プロトタイプ宣言
@@ -102,6 +107,7 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow);
 void UninitRenderer(void);
 
 void Clear(void);
+void ClearDSV(void);
 void Present(void);
 
 ID3D11Device *GetDevice( void );
@@ -128,9 +134,6 @@ void SetFog(FOG* fog);
 void SetDissolveBuffer(BOOL flag, float threshold);
 void SetDissolve(DISSOLVE* pDissolve);
 
-//void SetSectorFlag(BOOL flag);
-//void SetSector(SECTOR* pSec);
-
 void DebugTextOut(char* text, int x, int y);
 
 void SetRimLight(int flag);
@@ -138,3 +141,7 @@ void SetShaderCamera(XMFLOAT3 pos);
 
 void SetClearColor(float* color4);
 
+void SetRenderTargetView(int renderTarget);
+void SetShadowMapBuffer(void);
+void SetShaderResource(int target);
+void SetShader(int shaderMode);

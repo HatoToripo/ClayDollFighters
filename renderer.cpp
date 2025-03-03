@@ -6,6 +6,8 @@
 //=============================================================================
 #include "main.h"
 #include "renderer.h"
+#include "player.h"
+#include "light.h"
 
 //デバッグ用画面テキスト出力を有効にする
 #define DEBUG_DISP_TEXTOUT
@@ -66,6 +68,7 @@ struct RIM_LIGHT
 	int			fill[3];
 };
 
+// ディゾルブバッファ
 struct DISSOLVE_CBUFFER
 {
 	XMFLOAT4 edgeColor; // エッジの色0
@@ -75,14 +78,12 @@ struct DISSOLVE_CBUFFER
 	int Dummy;
 };
 
-// 扇形用バッファ
-//struct SECTOR_CBUFFER
-//{
-//	float startAngle;
-//	float endAngle;
-//	int flag;
-//	int Dummy; //16byte境界用
-//};
+// シャドウマップ用バッファ
+struct SHADOWMAP_CBUFFER 
+{
+	XMMATRIX lightViewProj;
+};
+
 //*****************************************************************************
 // プロトタイプ宣言
 //*****************************************************************************
@@ -99,6 +100,13 @@ static ID3D11DeviceContext*    g_ImmediateContext = NULL;
 static IDXGISwapChain*         g_SwapChain = NULL;
 static ID3D11RenderTargetView* g_RenderTargetView = NULL;
 static ID3D11DepthStencilView* g_DepthStencilView = NULL;
+static ID3D11ShaderResourceView* g_NoiseTexture = NULL;
+
+static ID3D11DepthStencilView* g_ShadowMapDSV = NULL;
+static ID3D11ShaderResourceView* g_ShadowMapSRV = NULL;
+static ID3D11SamplerState* ShadowMap_samplerState = NULL;
+static ID3D11VertexShader* ShadowMapVertexShader = NULL;
+static ID3D11PixelShader* ShadowMapPixelShader = NULL;
 
 
 
@@ -114,7 +122,7 @@ static ID3D11Buffer*			g_FogBuffer = NULL;
 static ID3D11Buffer*			g_RimLightBuffer = NULL;
 static ID3D11Buffer*			g_CameraBuffer = NULL;
 static ID3D11Buffer*			g_DissolveBuffer = NULL;
-//static ID3D11Buffer*			g_SectorBuffer = NULL;
+static ID3D11Buffer*			g_ShadowMapBuffer = NULL;
 
 static ID3D11DepthStencilState* g_DepthStateEnable;
 static ID3D11DepthStencilState* g_DepthStateDisable;
@@ -137,7 +145,8 @@ static FOG_CBUFFER		g_Fog;
 
 static RIM_LIGHT		g_RimLight;
 static DISSOLVE_CBUFFER	g_Dissolve;
-//static SECTOR_CBUFFER	g_Sector;
+
+static SHADOWMAP_CBUFFER g_Shadowmap;
 
 static float g_ClearColor[4] = { 0.3f, 0.3f, 0.3f, 1.0f };	// 背景色
 
@@ -397,27 +406,83 @@ void SetDissolve(DISSOLVE* pDissolve)
 	g_Dissolve.edgeColor = pDissolve->edgeColor;
 }
 
-// 扇形用
-//void SetSectorBuffer(void)
-//{
-//	GetDeviceContext()->UpdateSubresource(g_SectorBuffer, 0, NULL, &g_Sector, 0, 0);
-//}
-//
-//void SetSectorFlag(BOOL flag)
-//{
-//	// フラグを更新する
-//	g_Sector.flag = flag;
-//
-//	SetSectorBuffer();
-//}
-//
-//void SetSector(SECTOR* pSec)
-//{
-//	g_Sector.startAngle = pSec->startAngle;
-//	g_Sector.endAngle = pSec->endAngle;
-//
-//	SetSectorBuffer();
-//}
+void SetShadowMapBuffer(void)
+{
+	static LIGHT* light = GetLightData(0);
+	static PLAYER* g_player = GetPlayer();
+
+	XMFLOAT3 p_pos = { 0.0f,1.0f,0.0f };
+
+	XMFLOAT3 g_pos = { 0.0f, 10.0f,0.0f };
+
+	XMFLOAT3 g_dir = light[0].Direction;
+
+	p_pos = g_player->pos;
+
+	XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+
+	XMVECTOR  l_dir = XMVector3Normalize(XMLoadFloat3(&g_dir));
+	float lightHeight = 500.0f;
+	XMVECTOR player_pos = XMLoadFloat3(&p_pos);
+
+
+	XMVECTOR lightPosition = player_pos - l_dir * lightHeight;
+
+	XMMATRIX lightView = XMMatrixLookAtLH(lightPosition, XMLoadFloat3(&p_pos), XMLoadFloat3(&up));
+	XMMATRIX lightProjection = XMMatrixOrthographicLH(1000.0f, 1000.0f, 0.1f, 1000.0f);
+	XMMATRIX lightProjView = XMMatrixMultiply(lightView, lightProjection);
+
+	lightProjView = XMMatrixTranspose(lightProjView);
+
+	g_Shadowmap.lightViewProj = lightProjView;
+
+	GetDeviceContext()->UpdateSubresource(g_ShadowMapBuffer, 0, NULL, &g_Shadowmap, 0, 0);
+}
+
+
+void SetRenderTargetView(int renderTarget)
+{
+	ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
+	switch (renderTarget) {
+	case NORMAL_SCENE:
+		g_ImmediateContext->PSSetShaderResources(1, 1, nullSRVs);
+		g_ImmediateContext->OMSetRenderTargets(0, nullptr, nullptr);
+		g_ImmediateContext->OMSetRenderTargets(1, &g_RenderTargetView, g_DepthStencilView);
+		g_ImmediateContext->ClearDepthStencilView(g_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		break;
+	case SHADOW_MAP:
+		g_ImmediateContext->PSSetShaderResources(1, 1, nullSRVs);
+		g_ImmediateContext->OMSetRenderTargets(0, nullptr, g_ShadowMapDSV);
+		g_ImmediateContext->ClearDepthStencilView(g_ShadowMapDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		break;
+	}
+}
+
+void SetShaderResource(int target)
+{
+	ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
+	if (target == SHADOW_MAP) {
+		g_ImmediateContext->PSSetShaderResources(1, 1, &g_ShadowMapSRV);
+	}
+	else {
+		g_ImmediateContext->PSSetShaderResources(1, 1, nullSRVs);
+	}
+}
+
+
+void SetShader(int shaderMode) {
+	switch (shaderMode) {
+	case NORMAL_SCENE:
+		g_ImmediateContext->VSSetShader(g_VertexShader, NULL, 0);
+		g_ImmediateContext->PSSetShader(g_PixelShader, NULL, 0);
+		break;
+
+	case SHADOW_MAP:
+		g_ImmediateContext->VSSetShader(ShadowMapVertexShader, NULL, 0);
+		g_ImmediateContext->PSSetShader(NULL, NULL, 0);
+		break;
+	}
+}
 
 
 //=============================================================================
@@ -625,7 +690,67 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 
 	g_ImmediateContext->PSSetSamplers( 0, 1, &samplerState );
 
+	// シャドウマップ用設定
+	ID3D11Texture2D* shadowMap = NULL;
+	D3D11_TEXTURE2D_DESC ShadowMap_tex2dDesc;
+	ZeroMemory(&ShadowMap_tex2dDesc, sizeof(ShadowMap_tex2dDesc));
+	ShadowMap_tex2dDesc.Width = SHADOW_MAP_WIDTH;
+	ShadowMap_tex2dDesc.Height = SHADOW_MAP_HEIGHT;
+	ShadowMap_tex2dDesc.MipLevels = 1;
+	ShadowMap_tex2dDesc.ArraySize = 1;
+	ShadowMap_tex2dDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	ShadowMap_tex2dDesc.SampleDesc.Count = 1;
+	ShadowMap_tex2dDesc.Usage = D3D11_USAGE_DEFAULT;
+	ShadowMap_tex2dDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	ShadowMap_tex2dDesc.CPUAccessFlags = 0;
+	ShadowMap_tex2dDesc.MiscFlags = 0;
+	if (FAILED(g_D3DDevice->CreateTexture2D(&ShadowMap_tex2dDesc, nullptr, &shadowMap))) {
+		return S_FALSE;
+	}
 
+	D3D11_DEPTH_STENCIL_VIEW_DESC ShadowMap_dsvDesc;
+	ZeroMemory(&ShadowMap_dsvDesc, sizeof(ShadowMap_dsvDesc));
+	ShadowMap_dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	ShadowMap_dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	ShadowMap_dsvDesc.Texture2D.MipSlice = 0;
+
+	if (FAILED(g_D3DDevice->CreateDepthStencilView(shadowMap, &ShadowMap_dsvDesc, &g_ShadowMapDSV))) {
+		return S_FALSE;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC ShadowMap_srvDesc;
+	ZeroMemory(&ShadowMap_srvDesc, sizeof(ShadowMap_srvDesc));
+	ShadowMap_srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	ShadowMap_srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	ShadowMap_srvDesc.Texture2D.MostDetailedMip = 0;
+	ShadowMap_srvDesc.Texture2D.MipLevels = 1;
+
+	if (FAILED(g_D3DDevice->CreateShaderResourceView(shadowMap, &ShadowMap_srvDesc, &g_ShadowMapSRV))) {
+		return S_FALSE;
+	}
+
+	// シャドウマップステート設定
+	D3D11_SAMPLER_DESC ShadowMap_samplerDesc;
+	ZeroMemory(&ShadowMap_samplerDesc, sizeof(ShadowMap_samplerDesc));
+	ShadowMap_samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	ShadowMap_samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	ShadowMap_samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	ShadowMap_samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	ShadowMap_samplerDesc.BorderColor[0] = 1.0f;
+	ShadowMap_samplerDesc.BorderColor[1] = 1.0f;
+	ShadowMap_samplerDesc.BorderColor[2] = 1.0f;
+	ShadowMap_samplerDesc.BorderColor[3] = 1.0f;
+	ShadowMap_samplerDesc.MinLOD = 0.0f;
+	ShadowMap_samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	ShadowMap_samplerDesc.MipLODBias = 0.f;
+	ShadowMap_samplerDesc.MaxAnisotropy = 0;
+
+	ShadowMap_samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	ShadowMap_samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+	//ShadowMap_samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+
+	g_D3DDevice->CreateSamplerState(&ShadowMap_samplerDesc, &ShadowMap_samplerState);
+	g_ImmediateContext->PSSetSamplers(1, 1, &ShadowMap_samplerState);
 
 	// 頂点シェーダコンパイル・生成
 	ID3DBlob* pErrorBlob;
@@ -662,6 +787,33 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 
 	pVSBlob->Release();
 
+	// シャドウマップ用頂点シェーダコンパイル・生成
+	{
+		hr = D3DX11CompileFromFile("shaodowVS.hlsl", NULL, NULL, "VertexShaderShadow", "vs_4_0", shFlag, 0, NULL, &pVSBlob, &pErrorBlob, NULL);
+		if (FAILED(hr))
+		{
+			MessageBox(NULL, (char*)pErrorBlob->GetBufferPointer(), "VS", MB_OK | MB_ICONERROR);
+		}
+		g_D3DDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &ShadowMapVertexShader);
+
+		// 入力レイアウト生成
+		D3D11_INPUT_ELEMENT_DESC layout[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,		0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,		0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT,	0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,			0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		};
+
+		UINT numElements = ARRAYSIZE(layout);
+
+		g_D3DDevice->CreateInputLayout(layout,
+			numElements,
+			pVSBlob->GetBufferPointer(),
+			pVSBlob->GetBufferSize(),
+			&g_VertexLayout);
+		pVSBlob->Release();
+	}
 
 	// ピクセルシェーダコンパイル・生成
 	ID3DBlob* pPSBlob = NULL;
@@ -675,7 +827,6 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 	
 	pPSBlob->Release();
 
-	ID3D11ShaderResourceView* g_NoiseTexture = nullptr;
 
 	// ノイズテクスチャを読み込む
 	hr = D3DX11CreateShaderResourceViewFromFile(
@@ -690,7 +841,7 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 	if (FAILED(hr)) {
 		MessageBox(nullptr, "Failed to load noise texture", "Error", MB_OK | MB_ICONERROR);
 	}
-	g_ImmediateContext->PSSetShaderResources(1, 1, &g_NoiseTexture); // スロット0に設定
+	g_ImmediateContext->PSSetShaderResources(2, 1, &g_NoiseTexture); // スロット0に設定
 	// 定数バッファ生成
 	D3D11_BUFFER_DESC hBufferDesc;
 	hBufferDesc.ByteWidth = sizeof(XMMATRIX);
@@ -745,17 +896,17 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 	g_ImmediateContext->VSSetConstantBuffers(7, 1, &g_CameraBuffer);
 	g_ImmediateContext->PSSetConstantBuffers(7, 1, &g_CameraBuffer);
 
-	//ディソルブ
+	//ディゾルブ
 	hBufferDesc.ByteWidth = sizeof(DISSOLVE_CBUFFER);
 	g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_DissolveBuffer);
 	g_ImmediateContext->VSSetConstantBuffers(8, 1, &g_DissolveBuffer);
 	g_ImmediateContext->PSSetConstantBuffers(8, 1, &g_DissolveBuffer);
 
-	//扇形
-	//hBufferDesc.ByteWidth = sizeof(XMFLOAT4);
-	//g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_SectorBuffer);
-	//g_ImmediateContext->VSSetConstantBuffers(8, 1, &g_SectorBuffer);
-	//g_ImmediateContext->PSSetConstantBuffers(8, 1, &g_SectorBuffer);
+	//Light PVM
+	hBufferDesc.ByteWidth = sizeof(XMMATRIX);
+	g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_ShadowMapBuffer);
+	g_ImmediateContext->VSSetConstantBuffers(9, 1, &g_ShadowMapBuffer);
+	g_ImmediateContext->PSSetConstantBuffers(9, 1, &g_ShadowMapBuffer);
 
 	// 入力レイアウト設定
 	g_ImmediateContext->IASetInputLayout( g_VertexLayout );
@@ -807,7 +958,7 @@ void UninitRenderer(void)
 	if (g_LightBuffer)			g_LightBuffer->Release();
 	if (g_FogBuffer)			g_FogBuffer->Release();
 	if (g_DissolveBuffer)		g_DissolveBuffer->Release();
-	//if (g_SectorBuffer)			g_SectorBuffer->Release();
+	if (g_ShadowMapBuffer)		g_ShadowMapBuffer->Release();
 
 	if (g_VertexLayout)			g_VertexLayout->Release();
 	if (g_VertexShader)			g_VertexShader->Release();
@@ -832,6 +983,10 @@ void Clear(void)
 	g_ImmediateContext->ClearDepthStencilView( g_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
+void ClearDSV(void)
+{
+	g_ImmediateContext->ClearDepthStencilView(g_ShadowMapDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
 
 void SetClearColor(float* color4)
 {

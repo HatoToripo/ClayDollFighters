@@ -270,6 +270,14 @@ void SetViewPort(int type)
 		vp.TopLeftY = (FLOAT)SCREEN_HEIGHT / 2;
 		break;
 
+	case TYPE_SHADOWMAP:
+		vp.Width = (FLOAT)SHADOW_MAP_WIDTH;
+		vp.Height = (FLOAT)SHADOW_MAP_HEIGHT;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		vp.TopLeftX = 0;
+		vp.TopLeftY = 0;
+		break;
 
 	}
 	g_ImmediateContext->RSSetViewports(1, &vp);
