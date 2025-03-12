@@ -37,6 +37,7 @@
 //#define	MODEL_ENEMY_SCABBARD	"data/MODEL/enemy_scabbard.obj"			// 読み込むモデル名
 
 #define	VALUE_MOVE			(0.2f)						// 移動量
+#define	VALUE_BACK			(1.5f)						// 移動量
 #define	VALUE_ROTATE		(XM_PI * 0.02f)				// 回転量
 #define	VALUE_DISTANCE		(100.0f)					// 動く距離
 #define	VALUE_FRAME			(VALUE_DISTANCE / VALUE_MOVE)	// 動く距離
@@ -428,7 +429,7 @@ HRESULT InitEnemy(void)
 		LoadModel(MODEL_ENEMY, &g_Enemy[i].model);
 		g_Enemy[i].load = TRUE;
 
-		g_Enemy[i].pos = XMFLOAT3(-200.0f + i * 30.0f + rand() % 100, ENEMY_OFFSET_Y, -200.0f + i * 30.0f + rand() % 100);
+		g_Enemy[i].pos = XMFLOAT3(-140.0f + i * 15.0f + rand() % 100, ENEMY_OFFSET_Y, -140.0f + i * 15.0f + rand() % 100);
 		g_Enemy[i].rot = XMFLOAT3(0.0f, rand() % 360 * RADIAN, 0.0f);
 		g_Enemy[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
@@ -896,8 +897,8 @@ void UpdateEnemy(void)
 				{
 					// プレイヤーをホーミングする動き
 					XMFLOAT3 oldPos = g_Enemy[i].pos;
-					g_Enemy[i].pos.x += cosf(rad) * VALUE_MOVE;
-					g_Enemy[i].pos.z += sinf(rad) * VALUE_MOVE;
+					g_Enemy[i].pos.x -= sinf(g_Enemy[i].rot.y) * VALUE_MOVE;
+					g_Enemy[i].pos.z -= cosf(g_Enemy[i].rot.y) * VALUE_MOVE;
 
 					// オブジェクト同士が重ならないようにする
 
@@ -917,8 +918,8 @@ void UpdateEnemy(void)
 				
 					XMFLOAT3 pos = g_Enemy[i].pos;
 
-					pos.x -= (float)sinf(g_Enemy[i].rot.y) * ATTACK_DEPTH * 0.5f;
-					pos.z -= (float)cosf(g_Enemy[i].rot.y) * ATTACK_DEPTH * 0.5f;
+					pos.x -= sinf(g_Enemy[i].rot.y) * ATTACK_DEPTH * 0.5f;
+					pos.z -= cosf(g_Enemy[i].rot.y) * ATTACK_DEPTH * 0.5f;
 					animNum = ENEMY_ANIM_MOVE;
 
 					// 攻撃範囲内チェック
@@ -1616,6 +1617,13 @@ void ENEMY::Animation(int animNum1, int animNum2)
 int ENEMY::DecHP(int atk)
 {
 	hp -= atk;
+	PLAYER* player = GetPlayer();
+	float x = (player->pos.x - pos.x);
+	float z = (player->pos.z - pos.z);
+	float rad = atan2f(z, x);
+	pos.x -= cosf(rad) * VALUE_BACK;
+	pos.z -= sinf(rad) * VALUE_BACK;
+
 	// 体力がなくなったらパーティクルなどをセット
 	if (hp <= 0)
 	{

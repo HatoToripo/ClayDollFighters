@@ -34,9 +34,6 @@ enum
 {
 	START_GAME,
 	SETTING,
-#ifdef _DEBUG
-	EDITOR,
-#endif
 	QUIT_GAME,
 	MENU_MAX
 };
@@ -48,10 +45,6 @@ enum
 	TEXTURE_START,
 	TEXTURE_SELECT,
 	TEXTURE_SETTING,
-#ifdef _DEBUG
-	TEXTURE_EDITOR,
-
-#endif
 	TEXTURE_QUIT,
 	TEXTURE_CURSOR,
 
@@ -76,9 +69,6 @@ static char *g_TexturName[TEXTURE_MAX] = {
 	"data/TEXTURE/title_startgame.png",
 	"data/TEXTURE/title_selectstage.png",
 	"data/TEXTURE/title_settings.png",
-#ifdef _DEBUG
-	"data/TEXTURE/title_editor.png",
-#endif
 	"data/TEXTURE/title_quitgame.png",
 	"data/TEXTURE/title_cursor.png",
 };
@@ -248,22 +238,6 @@ void UpdateTitle(void)
 		}
 		break;
 
-#ifdef _DEBUG
-	case EDITOR:
-		if (GetKeyboardTrigger(DIK_RETURN))
-		{
-			SetMode(MODE_EDITOR);
-			PlaySound(SOUND_LABEL_SE_enter);
-		}
-		// ゲームパッドで入力処理
-		else if (IsButtonTriggered(0, BUTTON_B))
-		{
-			SetMode(MODE_EDITOR);
-			PlaySound(SOUND_LABEL_SE_enter);
-		}
-		break;
-#endif
-
 	case QUIT_GAME:
 		if (GetKeyboardTrigger(DIK_RETURN))
 		{
@@ -375,25 +349,6 @@ void DrawTitle(void)
 
 	// ポリゴン描画
 	GetDeviceContext()->Draw(4, 0);
-
-
-#ifdef _DEBUG
-	// テクスチャ設定
-	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[TEXTURE_EDITOR]);
-
-	//次のロゴを描画
-	py += TEXTURE_INTERVAL_LOGO;		// Settingの表示位置Y
-
-	// １枚のポリゴンの頂点とテクスチャ座標を設定
-	SetSpriteLTColor(g_VertexBuffer,
-		px, py, pw, ph,
-		tx, ty, tw, th,
-		XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-
-	// ポリゴン描画
-	GetDeviceContext()->Draw(4, 0);
-
-#endif
 
 	// テクスチャ設定
 	GetDeviceContext()->PSSetShaderResources(0, 1, &g_Texture[TEXTURE_QUIT]);

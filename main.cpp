@@ -11,7 +11,6 @@
 #include "camera.h"
 #include "sound.h"
 #include "model.h"
-#include "editplayer.h"
 #include "player.h"
 #include "enemy.h"
 #include "game.h"
@@ -376,11 +375,6 @@ void Update(void)
 	case MODE_GAMEOVER:
 		SetFade(FADE_OUT, MODE_GAME);
 		break;
-#ifdef _DEBUG
-	case MODE_EDITOR:
-		UpdateEditPlayer();
-		break;
-#endif
 	}
 
 	// フェード処理の更新
@@ -502,20 +496,6 @@ void Draw(void)
 
 	case MODE_GAMEOVER:
 		break;
-
-	case MODE_EDITOR:
-		EDITPLAYER* player = GetEditPlayer();
-		CAMERA* camera = GetCamera();
-
-		XMFLOAT3 pos = player->pos;
-
-		camera->pos = player->pos;
-		pos.y = 5.0f;			// カメラ酔いを防ぐためにクリアしている
-		SetCameraAT(pos);
-		SetCamera();
-
-		DrawEditPlayer();
-		break;
 	}
 
 	{	// フェード処理
@@ -594,10 +574,6 @@ void SetMode(int mode)
 	// リザルト画面の終了処理
 	UninitResult();
 
-#ifdef _DEBUG
-	// エディター画面の終了処理
-	UninitEditPlayer();
-#endif
 	g_Mode = mode;	// 次のモードをセットしている
 
 	switch (g_Mode)
@@ -627,12 +603,6 @@ void SetMode(int mode)
 		InitResult();
 		PlaySound(SOUND_LABEL_BGM_clear);
 		break;
-#ifdef _DEBUG
-	case MODE_EDITOR:
-		// リザルト画面の初期化
-		InitEditPlayer();
-		break;
-#endif
 		// ゲーム終了時の処理
 	case MODE_MAX:
 		// エネミーの終了処理

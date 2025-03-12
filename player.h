@@ -56,6 +56,8 @@ public:
 	XMFLOAT3			rot;				// モデルの向き(回転)
 	XMFLOAT3			scl;				// モデルの大きさ(スケール)
 
+	XMFLOAT2			dir;				// プレイヤーの方向
+
 	int					hp;					// 体力
 	int					gauge;				// ゲージ
 	float				spd;				// 移動スピード
@@ -110,6 +112,8 @@ void DrawPlayer(void);
 
 PLAYER *GetPlayer(void);
 PLAYER* GetPlayerParts(void);
+float NormalizeAngle(float angle);
+float Turn(float target, float current);
 
 //void PlayerAnimation(int animNum, int i);
 //void PlayerAnimationBlend(int animNum1, int animNum2, int i);

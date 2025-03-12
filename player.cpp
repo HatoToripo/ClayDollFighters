@@ -575,6 +575,8 @@ HRESULT InitPlayer(void)
 		g_Player[i].rot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		g_Player[i].scl = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
+		g_Player[i].dir = XMFLOAT2(0.0f, 0.0f);
+
 		g_Player[i].spd = 0.0f;			// 移動スピードクリア
 		g_Player[i].hp = 20;				// 体力の初期化
 		g_Player[i].gauge = 0;			// 体力の初期化
@@ -973,38 +975,43 @@ void UpdatePlayer(void)
 				CAMERA* cam = GetCamera();
 
 				g_Player[i].spd *= 0.4f;
-
+				// 移動フラグリセット
+				g_Player[i].dir = XMFLOAT2(0.0f, 0.0f);
 				// アニメーションを待機モーションにリセット
 				int animNum = PLAYER_ANIM_STOP;
 
 				// 移動処理
-				if (GetKeyboardPress(DIK_LEFT))
+				if (GetKeyboardPress(DIK_LEFT) || GetKeyboardPress(DIK_A))
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.x -= g_Player[i].spd;
-					roty = XM_PI / 2;
+					g_Player[i].dir.x = -1.0f;
+					//roty = XM_PI / 2;
 					animNum = PLAYER_ANIM_MOVE;
 				}
-				if (GetKeyboardPress(DIK_RIGHT))
+				if (GetKeyboardPress(DIK_RIGHT) || GetKeyboardPress(DIK_D))
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.x += g_Player[i].spd;
-					roty = -XM_PI / 2;
+					g_Player[i].dir.x = 1.0f;
+					//roty = -XM_PI / 2;
 					animNum = PLAYER_ANIM_MOVE;
 				}
 
-				if (GetKeyboardPress(DIK_UP))
+				if (GetKeyboardPress(DIK_UP) || GetKeyboardPress(DIK_W))
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.z += g_Player[i].spd;
-					roty = XM_PI;
+					g_Player[i].dir.y = 1.0f;
+					//roty = XM_PI;
 					animNum = PLAYER_ANIM_MOVE;
 				}
-				if (GetKeyboardPress(DIK_DOWN))
+				if (GetKeyboardPress(DIK_DOWN) || GetKeyboardPress(DIK_S))
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.z -= g_Player[i].spd;
-					roty = 0.0f;
+					g_Player[i].dir.y = -1.0f;
+					//roty = 0.0f;
 					animNum = PLAYER_ANIM_MOVE;
 				}
 
@@ -1013,14 +1020,16 @@ void UpdatePlayer(void)
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.x -= g_Player[i].spd;
-					roty = XM_PI / 2;
+					g_Player[i].dir.x = XM_PI / 2;
+					//roty = XM_PI / 2;
 					animNum = PLAYER_ANIM_MOVE;
 				}
 				if (IsButtonPressed(0, BUTTON_RIGHT))
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.x += g_Player[i].spd;
-					roty = -XM_PI / 2;
+					g_Player[i].dir.x = -XM_PI / 2;
+					//roty = -XM_PI / 2;
 					animNum = PLAYER_ANIM_MOVE;
 				}
 
@@ -1028,14 +1037,16 @@ void UpdatePlayer(void)
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.z += g_Player[i].spd;
-					roty = XM_PI;
+					g_Player[i].dir.y = XM_PI;
+					//roty = XM_PI;
 					animNum = PLAYER_ANIM_MOVE;
 				}
 				if (IsButtonPressed(0, BUTTON_DOWN))
 				{
 					g_Player[i].spd = VALUE_MOVE;
 					//g_Player[i].pos.z -= g_Player[i].spd;
-					roty = 0.0f;
+					g_Player[i].dir.y = 0.0f;
+					//roty = 0.0f;
 					animNum = PLAYER_ANIM_MOVE;
 				}
 
@@ -1077,15 +1088,29 @@ void UpdatePlayer(void)
 				//	roty = 0.0f;
 				//}
 #endif
-
-				{	// 押した方向にプレイヤーを移動させる
-					// 押した方向にプレイヤーを向かせている所
-					g_Player[i].rot.y = roty + cam->rot.y;
-
-					g_Player[i].pos.x -= sinf(g_Player[i].rot.y) * g_Player[i].spd;
-					g_Player[i].pos.z -= cosf(g_Player[i].rot.y) * g_Player[i].spd;
+				if (g_Player[i].dir.x != 0.0f || g_Player[i].dir.y != 0.0f)
+				{
+					roty = atan2f(g_Player[i].dir.x, g_Player[i].dir.y) + XM_PI;
 				}
 
+				//    // Key入力があったら移動処理する
+				if (g_Player[i].spd > 0.0f)
+				{
+					g_Player[i].rot.y = Turn(roty + cam->rot.y, g_Player[i].rot.y);
+
+					// 入力のあった方向へプレイヤーを向かせて移動させる
+					g_Player[i].pos.x -= sinf(roty + cam->rot.y) * g_Player[i].spd;
+					g_Player[i].pos.z -= cosf(roty + cam->rot.y) * g_Player[i].spd;
+				}
+
+				//{	// 押した方向にプレイヤーを移動させる
+				//	// 押した方向にプレイヤーを向かせている所
+				//	g_Player[i].rot.y = roty + cam->rot.y;
+
+				//	g_Player[i].pos.x -= sinf(g_Player[i].rot.y) * g_Player[i].spd;
+				//	g_Player[i].pos.z -= cosf(g_Player[i].rot.y) * g_Player[i].spd;
+				//}
+				
 				// レイキャストして足元の高さを求める
 				XMFLOAT3 HitPosition;		// 交点
 				XMFLOAT3 Normal;			// ぶつかったポリゴンの法線ベクトル（向き）
@@ -1558,6 +1583,30 @@ PLAYER* GetPlayer(void)
 PLAYER* GetPlayerParts(void)
 {
 	return &g_Parts[0][0];
+}
+
+//=============================================================================
+// 回転量調節
+//=============================================================================
+float NormalizeAngle(float angle)
+{
+
+	while (angle > XM_PI) angle -= 2 * XM_PI;
+	while (angle < -XM_PI) angle += 2 * XM_PI;
+	return angle;
+}
+
+//=============================================================================
+// プレイヤーの向きを変更
+//=============================================================================
+float Turn(float target, float current)
+{
+	target = NormalizeAngle(target);
+	current = NormalizeAngle(current);
+	float diff = target - current;
+	diff = NormalizeAngle(diff);
+
+	return current + diff / 10.0f;
 }
 
 //=============================================================================

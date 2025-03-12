@@ -116,11 +116,11 @@ HRESULT InitMeshField(XMFLOAT3 pos, XMFLOAT3 rot,
 			float dz = g_Vertex[z * (g_nNumBlockXField + 1) + x].Position.z - g_Center.z;
 
 			// ”g–ä‚Ì’†S“_‚©‚ç‚Ì‹——£‚ğ“¾‚é
-			float len = (float)sqrt(dx * dx + dz * dz);
+			//float len = (float)sqrt(dx * dx + dz * dz);
 
-			// ”g‚Ì‚‚³‚ğAsinŠÖ”‚Å“¾‚é
-			// ”g‚Ì‚‚³@= sin( -Œo‰ßŠÔ * ü”g” + ‹——£ * ‹——£•â³ ) * U•
-			g_Vertex[z * (g_nNumBlockXField + 1) + x].Position.y = sinf(-g_Time * g_wave_frequency + len * g_wave_correction) * g_wave_amplitude;
+			//// ”g‚Ì‚‚³‚ğAsinŠÖ”‚Å“¾‚é
+			//// ”g‚Ì‚‚³@= sin( -Œo‰ßŠÔ * ü”g” + ‹——£ * ‹——£•â³ ) * U•
+			//g_Vertex[z * (g_nNumBlockXField + 1) + x].Position.y = sinf(-g_Time * g_wave_frequency + len * g_wave_correction) * g_wave_amplitude;
 
 
 			// –@ü‚Ìİ’è

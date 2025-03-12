@@ -16,8 +16,8 @@
 #define	POS_Y_CAM			(20.0f)			// カメラの初期位置(Y座標)
 #define	POS_Z_CAM			(-50.0f)		// カメラの初期位置(Z座標)
 
-#define POS_X_MAX			(270.0f)		// カメラの最大値(X座標)
-#define POS_X_MAX			(270.0f)		// カメラの最大値(Z座標)
+#define POS_X_MAX			(130.0f)		// カメラの最大値(X座標)
+#define POS_X_MAX			(130.0f)		// カメラの最大値(Z座標)
 
 //#define	POS_X_CAM			(0.0f)			// カメラの初期位置(X座標)
 //#define	POS_Y_CAM			(50.0f)			// カメラの初期位置(Y座標)
@@ -73,11 +73,8 @@ void UninitCamera(void)
 //=============================================================================
 void UpdateCamera(void)
 {
-
-#ifdef _DEBUG
-
-	if (GetKeyboardPress(DIK_Z))
-	{// 視点旋回「左」
+	if (GetKeyboardPress(DIK_C))
+	{// 視点旋回「右」
 		g_Camera.rot.y += VALUE_ROTATE_CAMERA;
 		if (g_Camera.rot.y > XM_PI)
 		{
@@ -88,8 +85,8 @@ void UpdateCamera(void)
 		g_Camera.pos.z = g_Camera.at.z - cosf(g_Camera.rot.y) * g_Camera.len;
 	}
 
-	if (GetKeyboardPress(DIK_C))
-	{// 視点旋回「右」
+	if (GetKeyboardPress(DIK_Z))
+	{// 視点旋回「左」
 		g_Camera.rot.y -= VALUE_ROTATE_CAMERA;
 		if (g_Camera.rot.y < -XM_PI)
 		{
@@ -99,6 +96,8 @@ void UpdateCamera(void)
 		g_Camera.pos.x = g_Camera.at.x - sinf(g_Camera.rot.y) * g_Camera.len;
 		g_Camera.pos.z = g_Camera.at.z - cosf(g_Camera.rot.y) * g_Camera.len;
 	}
+
+#ifdef _DEBUG
 
 	if (GetKeyboardPress(DIK_Y))
 	{// 視点移動「上」
